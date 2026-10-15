@@ -116,10 +116,12 @@ The assistant dynamically mounts and delegates to specialized skills in `~/.agen
 
 ---
 
-## Recommended Step 1 in Fresh Session
+## Recommended Roadmap for Fresh Session
 1. Open new session in `~/dev/slopscore`.
-2. Scaffold `package.json` with dependencies (`three`, `pixi.js`, `p5`, `@jason.today/webmcp`).
-3. Port the generalized Director Studio (`studio/index.html` & `studio/server.mjs`).
-4. Port the core audio/measure and loop-finder kits.
-5. Implement the `mcp/server.mjs` and `studio/assistant/` connectors.
-6. Verify with `slopscore init my-project` and launch the studio!
+2. Scaffold `package.json` with dependencies (`three`, `pixi.js`, `p5`, `@jason.today/webmcp`, etc.).
+3. Port and generalize the Director Studio (`studio/index.html` & `studio/server.mjs`).
+4. Port the core audio/measure timekeeper and loop-finder kits.
+5. Implement the pluggable renderer adapters (`renderers/` for WebGPU, Three.js, fframes, HyperFrames, Pixi, p5, Native C).
+6. Implement the `mcp/server.mjs` (stdio MCP) and `studio/webmcp-bridge.js` (WebMCP) connectors.
+7. Verify with `slopscore init my-project` and test launching the studio.
+8. **Adapt `slopscore` Skill**: Once the project foundation and studio are built out, rewrite `slopscore/SKILL.md` to be the primary agent skill that enables full interactive direction of the Slopscore Studio.
