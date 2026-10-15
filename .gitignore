@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Output & heavy binaries
+out/
+*.mp4
+*.wav
+*.bin
+*.log
+native-render
+out/native-render
