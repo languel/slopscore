@@ -2205,6 +2205,28 @@
         syncOverrideSliders();
         rebuildClockAndTimeline();
         renderCuesBar();
+
+        // Cache bust media elements so newly rendered assets are loaded fresh
+        const cacheBust = Date.now();
+        if (video) {
+          video.src = `/out/video.mp4?t=${cacheBust}`;
+          video.load();
+          video.addEventListener('loadedmetadata', () => {
+            const diff = Math.abs((video.duration || 0) - state.duration);
+            if (diff > 5 && video.duration > 0) {
+              const badge = document.getElementById('cur-engine-badge');
+              if (badge) {
+                badge.textContent = `VIDEO (${Math.round(video.duration)}s • RENDER PENDING)`;
+                badge.style.color = 'var(--accent-coral)';
+                badge.title = `Video file duration (${video.duration.toFixed(1)}s) does not match project duration (${state.duration.toFixed(1)}s). Use Live Preview for real-time 3D or click Render Master Video.`;
+              }
+            }
+          }, { once: true });
+        }
+        const sheetImg = document.getElementById('sheet-img');
+        if (sheetImg) {
+          sheetImg.src = `/out/sheet.jpg?t=${cacheBust}`;
+        }
       } catch (err) {
         console.warn('Failed to load /api/project, using defaults:', err);
         rebuildClockAndTimeline();
@@ -2684,6 +2706,9 @@
           return;
         }
         updateTransportReadout(t);
+        if (state.previewMode === 'live' && state.liveHost) {
+          state.liveHost.renderAt(t);
+        }
       };
 
       video.addEventListener('timeupdate', () => {
