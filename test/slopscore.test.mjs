@@ -154,6 +154,39 @@ test('Director Studio HTTP Server, Assistant, and WebMCP routes', async () => {
     assert.ok(chat.reply);
     assert.ok(Array.isArray(chat.proposals));
     assert.ok(chat.proposals.length >= 1);
+
+    // Test Docs & Spec API
+    const docsListRes = await fetch(`${srv.url}/api/docs/list`);
+    assert.equal(docsListRes.status, 200);
+    const docsListData = await docsListRes.json();
+    assert.ok(Array.isArray(docsListData.files));
+    assert.ok(docsListData.files.some(f => f.path === 'project-spec.md'));
+
+    const specRes = await fetch(`${srv.url}/api/docs?path=project-spec.md`);
+    assert.equal(specRes.status, 200);
+    const specData = await specRes.json();
+    assert.ok(specData.content.includes('# Project Specification Sheet'));
+
+    // Test save new note
+    const saveRes = await fetch(`${srv.url}/api/docs`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: 'notes/test-note.md', content: '# Test Note\nHello world' })
+    });
+    assert.equal(saveRes.status, 200);
+
+    const getNoteRes = await fetch(`${srv.url}/api/docs?path=notes/test-note.md`);
+    assert.equal(getNoteRes.status, 200);
+    const getNoteData = await getNoteRes.json();
+    assert.ok(getNoteData.content.includes('Hello world'));
+
+    // Clean up test note
+    const delRes = await fetch(`${srv.url}/api/docs/delete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: 'notes/test-note.md' })
+    });
+    assert.equal(delRes.status, 200);
   } finally {
     await srv.close();
   }

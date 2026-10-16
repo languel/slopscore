@@ -545,6 +545,173 @@ export async function startStudioServer(opts = {}) {
       }
     }
 
+    // --- API: SPEC & MARKDOWN NOTES ---
+    if (pathname === '/api/docs/list' && req.method === 'GET') {
+      try {
+        const docExts = new Set(['.md', '.markdown', '.txt', '.html', '.htm']);
+        const items = [];
+
+        function scanDir(dir, prefix = '') {
+          if (!fs.existsSync(dir)) return;
+          const entries = fs.readdirSync(dir, { withFileTypes: true });
+          for (const ent of entries) {
+            if (ent.name.startsWith('.') || ent.name === 'node_modules' || ent.name === 'out') continue;
+            const relPath = prefix ? `${prefix}/${ent.name}` : ent.name;
+            const fullPath = path.join(dir, ent.name);
+            if (ent.isDirectory()) {
+              items.push({ path: relPath, name: ent.name, isDirectory: true });
+              scanDir(fullPath, relPath);
+            } else if (ent.isFile()) {
+              const ext = path.extname(ent.name).toLowerCase();
+              if (docExts.has(ext)) {
+                const stat = fs.statSync(fullPath);
+                items.push({
+                  path: relPath,
+                  name: ent.name,
+                  isDirectory: false,
+                  ext,
+                  size: stat.size,
+                  mtime: stat.mtime.toISOString(),
+                  isSpec: ent.name.toLowerCase() === 'project-spec.md'
+                });
+              }
+            }
+          }
+        }
+
+        scanDir(resolvedRoot);
+        // Ensure project-spec.md exists in root if missing
+        const specPath = path.join(resolvedRoot, 'project-spec.md');
+        if (!fs.existsSync(specPath)) {
+          const defaultSpec = `# Project Specification Sheet\n\n**Project:** ${project.title || 'Slopscore Project'}\n**BPM:** ${project.audio?.bpm || 120}\n\n## 1. Creative Direction\n\n## 2. Audio Specs\n\n## 3. Visuals & Cues\n`;
+          fs.writeFileSync(specPath, defaultSpec, 'utf8');
+          items.unshift({
+            path: 'project-spec.md',
+            name: 'project-spec.md',
+            isDirectory: false,
+            ext: '.md',
+            size: Buffer.byteLength(defaultSpec),
+            mtime: new Date().toISOString(),
+            isSpec: true
+          });
+        }
+
+        return sendJson(res, 200, { files: items, defaultFile: 'project-spec.md' });
+      } catch (err) {
+        return sendJson(res, 500, { error: err.message });
+      }
+    }
+
+    if (pathname === '/api/docs' && req.method === 'GET') {
+      try {
+        const rel = parsedUrl.searchParams.get('path') || parsedUrl.searchParams.get('file') || 'project-spec.md';
+        const safeRel = path.normalize(rel).replace(/^(\.\.[\/\\])+/, '');
+        const target = path.resolve(resolvedRoot, safeRel);
+        if (!target.startsWith(resolvedRoot)) {
+          return sendJson(res, 403, { error: 'Forbidden' });
+        }
+        if (!fs.existsSync(target)) {
+          if (safeRel === 'project-spec.md') {
+            const defaultSpec = `# Project Specification Sheet\n\n**Project:** ${project.title || 'Slopscore Project'}\n**BPM:** ${project.audio?.bpm || 120}\n\n## 1. Creative Direction\n\n## 2. Audio Specs\n\n## 3. Visuals & Cues\n`;
+            fs.writeFileSync(target, defaultSpec, 'utf8');
+            return sendJson(res, 200, {
+              success: true,
+              path: safeRel,
+              content: defaultSpec,
+              mtime: new Date().toISOString(),
+              isSpec: true
+            });
+          }
+          return sendJson(res, 404, { error: 'File not found' });
+        }
+        const stat = fs.statSync(target);
+        if (stat.isDirectory()) {
+          return sendJson(res, 400, { error: 'Target is a directory' });
+        }
+        const content = fs.readFileSync(target, 'utf8');
+        return sendJson(res, 200, {
+          success: true,
+          path: safeRel,
+          content,
+          mtime: stat.mtime.toISOString(),
+          isSpec: path.basename(safeRel).toLowerCase() === 'project-spec.md'
+        });
+      } catch (err) {
+        return sendJson(res, 500, { error: err.message });
+      }
+    }
+
+    if (pathname === '/api/docs' && req.method === 'POST') {
+      try {
+        const body = await readJsonBody();
+        const rel = body.path || 'project-spec.md';
+        const safeRel = path.normalize(rel).replace(/^(\.\.[\/\\])+/, '');
+        const target = path.resolve(resolvedRoot, safeRel);
+        if (!target.startsWith(resolvedRoot)) {
+          return sendJson(res, 403, { error: 'Forbidden' });
+        }
+        fs.mkdirSync(path.dirname(target), { recursive: true });
+        fs.writeFileSync(target, body.content ?? '', 'utf8');
+        const stat = fs.statSync(target);
+        return sendJson(res, 200, {
+          success: true,
+          path: safeRel,
+          mtime: stat.mtime.toISOString()
+        });
+      } catch (err) {
+        return sendJson(res, 500, { error: err.message });
+      }
+    }
+
+    if (pathname === '/api/docs/create' && req.method === 'POST') {
+      try {
+        const { path: rel, isDirectory, content } = await readJsonBody();
+        if (!rel) return sendJson(res, 400, { error: 'path required' });
+        const safeRel = path.normalize(rel).replace(/^(\.\.[\/\\])+/, '');
+        const target = path.resolve(resolvedRoot, safeRel);
+        if (!target.startsWith(resolvedRoot)) {
+          return sendJson(res, 403, { error: 'Forbidden' });
+        }
+        if (isDirectory) {
+          fs.mkdirSync(target, { recursive: true });
+        } else {
+          fs.mkdirSync(path.dirname(target), { recursive: true });
+          if (!fs.existsSync(target)) {
+            fs.writeFileSync(target, content || `# ${path.basename(safeRel, path.extname(safeRel))}\n\n`, 'utf8');
+          }
+        }
+        return sendJson(res, 200, { success: true, path: safeRel, isDirectory: !!isDirectory });
+      } catch (err) {
+        return sendJson(res, 500, { error: err.message });
+      }
+    }
+
+    if (pathname === '/api/docs/delete' && req.method === 'POST') {
+      try {
+        const { path: rel } = await readJsonBody();
+        if (!rel) return sendJson(res, 400, { error: 'path required' });
+        const safeRel = path.normalize(rel).replace(/^(\.\.[\/\\])+/, '');
+        if (safeRel === 'project-spec.md' || safeRel === 'slopscore.config.js') {
+          return sendJson(res, 400, { error: 'Cannot delete core project file' });
+        }
+        const target = path.resolve(resolvedRoot, safeRel);
+        if (!target.startsWith(resolvedRoot)) {
+          return sendJson(res, 403, { error: 'Forbidden' });
+        }
+        if (fs.existsSync(target)) {
+          const stat = fs.statSync(target);
+          if (stat.isDirectory()) {
+            fs.rmSync(target, { recursive: true, force: true });
+          } else {
+            fs.unlinkSync(target);
+          }
+        }
+        return sendJson(res, 200, { success: true, path: safeRel });
+      } catch (err) {
+        return sendJson(res, 500, { error: err.message });
+      }
+    }
+
     // --- API: VERSIONS ---
     if (pathname === '/api/versions' && req.method === 'GET') {
       const versionsData = getVersionsData(loaded);

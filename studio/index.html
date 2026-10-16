@@ -370,23 +370,50 @@
       display: inline-flex;
     }
 
-    /* BUILD TERMINAL DRAWER */
+    /* BUILD TERMINAL DRAWER (Docks at bottom, pushes main content up) */
     .terminal-drawer {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 250px;
+      height: var(--terminal-height, 220px);
+      min-height: 100px;
+      max-height: calc(100vh - 120px);
       background: var(--bg-primary);
       border-top: 1px solid var(--border-focus);
-      box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.45);
-      z-index: 500;
-      display: flex;
+      box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.35);
+      z-index: 100;
+      display: none;
       flex-direction: column;
-      transform: translateY(100%);
-      transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+      flex-shrink: 0;
+      position: relative;
     }
-    .terminal-drawer.open { transform: translateY(0); }
+    .terminal-drawer.open { display: flex; }
+    .terminal-resizer {
+      height: 6px;
+      cursor: row-resize;
+      background: var(--border-color);
+      position: absolute;
+      top: -3px;
+      left: 0;
+      right: 0;
+      z-index: 102;
+      transition: background 0.15s ease;
+    }
+    .terminal-resizer:hover, .terminal-resizer.is-dragging {
+      background: var(--accent-teal);
+    }
+
+    /* DRAGGABLE SIDE SPLITTERS */
+    .side-resizer {
+      width: 5px;
+      background: var(--border-color);
+      cursor: col-resize;
+      user-select: none;
+      flex-shrink: 0;
+      transition: background 0.15s ease;
+      position: relative;
+      z-index: 20;
+    }
+    .side-resizer:hover, .side-resizer.is-dragging {
+      background: var(--accent-teal);
+    }
     .terminal-header {
       height: 36px;
       background: var(--bg-secondary);
@@ -518,14 +545,18 @@
     /* VIEW 1: MASTER CUT REVIEW */
     .master-layout {
       flex: 1;
-      display: grid;
-      grid-template-columns: 1fr 380px;
+      display: flex;
+      flex-direction: row;
       overflow: hidden;
+      width: 100%;
+      height: 100%;
     }
     .player-section {
+      flex: 1;
+      min-width: 320px;
       display: flex;
       flex-direction: column;
-      border-right: 1px solid var(--border);
+      border-right: none;
       background: #000;
       overflow: hidden;
     }
@@ -948,29 +979,29 @@
     #audio-waveform-canvas, #audio-features-canvas { width: 100%; height: 100%; display: block; }
 
     /* VIEW 3: CONTACT SHEET & STORYBOARD PLAN */
-    .sheet-layout { flex: 1; display: grid; grid-template-columns: 1fr 440px; overflow: hidden; }
-    .sheet-preview-pane { display: flex; flex-direction: column; padding: 16px; overflow-y: auto; align-items: center; background: var(--bg-primary); border-right: 1px solid var(--border-color); }
+    .sheet-layout { flex: 1; display: flex; flex-direction: row; overflow: hidden; width: 100%; height: 100%; }
+    .sheet-preview-pane { flex: 1; min-width: 320px; display: flex; flex-direction: column; padding: 16px; overflow-y: auto; align-items: center; background: var(--bg-primary); border-right: none; }
     .sheet-interactive-container { position: relative; display: inline-block; max-width: 95%; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border-color); }
     #sheet-img { display: block; width: 100%; height: auto; min-height: 240px; background: var(--bg-secondary); }
     .sheet-grid-overlay { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(4, 1fr); pointer-events: auto; }
     .sheet-cell { border: 1px solid rgba(255, 255, 255, 0.12); cursor: pointer; position: relative; transition: all 0.12s ease; display: flex; align-items: flex-start; justify-content: flex-end; padding: 5px; }
     .sheet-cell:hover { background: color-mix(in srgb, var(--accent-teal) 15%, transparent); border-color: var(--accent-teal); }
     .cell-badge { background: color-mix(in srgb, var(--bg-primary) 85%, transparent); color: var(--text-primary); border: 1px solid var(--border-color); padding: 1px 5px; border-radius: 3px; font-size: 9.5px; font-family: ui-monospace, monospace; }
-    .plan-table-pane { padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: var(--bg-secondary); }
+    .plan-table-pane { width: var(--sheet-sidebar-width, 440px); min-width: 280px; max-width: 700px; flex-shrink: 0; padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: var(--bg-secondary); border-left: 1px solid var(--border-color); }
     .chapter-card { background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 10px; display: flex; flex-direction: column; gap: 5px; }
     .chapter-card-top { display: flex; align-items: center; justify-content: space-between; }
     .chapter-card-title { font-size: 12px; font-weight: 600; color: var(--text-primary); }
     .chapter-card-meta { font-size: 10.5px; color: var(--text-muted); }
 
     /* VIEW 4: ASSET FOOTAGE & LOOP EXPLORER */
-    .assets-layout { flex: 1; display: grid; grid-template-columns: 320px 1fr; overflow: hidden; }
-    .assets-sidebar { border-right: 1px solid var(--border-color); background: var(--bg-secondary); overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+    .assets-layout { flex: 1; display: flex; flex-direction: row; overflow: hidden; width: 100%; height: 100%; }
+    .assets-sidebar { width: var(--assets-sidebar-width, 320px); min-width: 220px; max-width: 550px; flex-shrink: 0; border-right: 1px solid var(--border-color); background: var(--bg-secondary); overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
     .asset-item { background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 8px 10px; cursor: pointer; display: flex; flex-direction: column; gap: 3px; transition: all 0.12s ease; }
     .asset-item:hover { border-color: var(--border-focus); background: var(--bg-hover); }
     .asset-item.active { border-color: var(--accent-teal); background: color-mix(in srgb, var(--accent-teal) 10%, var(--bg-tertiary)); }
     .asset-name { font-size: 11.5px; font-weight: 600; color: var(--text-primary); }
     .asset-meta { font-size: 9.5px; color: var(--text-muted); }
-    .asset-inspector { display: flex; flex-direction: column; background: var(--bg-primary); overflow: hidden; padding: 16px; gap: 12px; }
+    .asset-inspector { flex: 1; min-width: 320px; display: flex; flex-direction: column; background: var(--bg-primary); overflow: hidden; padding: 16px; gap: 12px; }
     .inspector-player-wrapper { flex: 1; position: relative; display: flex; align-items: center; justify-content: center; background: #000; border-radius: var(--radius); border: 1px solid var(--border-color); overflow: hidden; }
     #asset-video { max-width: 100%; max-height: 100%; object-fit: contain; }
     .loop-controls-panel { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
@@ -1008,6 +1039,166 @@
     .clip-card-meta { font-size: 10px; color: var(--text-muted); display: flex; gap: 6px; }
     .clip-card-tags { display: flex; flex-wrap: wrap; gap: 3px; }
     .clip-tag-pill { font-size: 9px; padding: 1px 5px; border-radius: 3px; background: var(--bg-primary); color: var(--text-secondary); border: 1px solid var(--border-color); }
+
+    /* VIEW 6: PROJECT SPEC & MARKDOWN NOTES */
+    .spec-layout {
+      flex: 1;
+      display: flex;
+      flex-direction: row;
+      overflow: hidden;
+      width: 100%;
+      height: 100%;
+      background: var(--bg-primary);
+    }
+    .spec-sidebar {
+      width: var(--spec-sidebar-width, 270px);
+      min-width: 200px;
+      max-width: 480px;
+      flex-shrink: 0;
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .spec-sidebar-header {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+    .spec-sidebar-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .spec-file-tree {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .spec-file-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 8px;
+      border-radius: var(--radius);
+      border: 1px solid transparent;
+      cursor: pointer;
+      user-select: none;
+      font-size: 11.5px;
+      color: var(--text-secondary);
+      transition: all 0.12s ease;
+    }
+    .spec-file-item:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+      border-color: var(--border-color);
+    }
+    .spec-file-item.active {
+      background: color-mix(in srgb, var(--accent-teal) 14%, var(--bg-tertiary));
+      border-color: var(--accent-teal);
+      color: var(--accent-teal);
+      font-weight: 600;
+    }
+    .spec-file-badge {
+      font-size: 9px;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 3px;
+      background: color-mix(in srgb, var(--accent-gold) 20%, transparent);
+      color: var(--accent-gold);
+      border: 1px solid color-mix(in srgb, var(--accent-gold) 40%, transparent);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .spec-main-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-width: 320px;
+      background: var(--bg-primary);
+    }
+    .spec-toolbar {
+      height: 38px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 14px;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    .spec-editor-workspace {
+      flex: 1;
+      display: flex;
+      flex-direction: row;
+      overflow: hidden;
+      position: relative;
+    }
+    .spec-editor-pane {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border-right: none;
+      background: var(--bg-primary);
+    }
+    .spec-editor-textarea {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      border: none;
+      outline: none;
+      padding: 14px 18px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 12.5px;
+      line-height: 1.6;
+      resize: none;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      tab-size: 2;
+    }
+    .spec-preview-pane {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      padding: 18px 24px;
+      background: var(--bg-secondary);
+      line-height: 1.65;
+      font-size: 13px;
+      color: var(--text-primary);
+    }
+    .spec-preview-pane h1 { font-size: 18px; font-weight: 700; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; margin: 16px 0 12px 0; color: var(--text-primary); }
+    .spec-preview-pane h2 { font-size: 15px; font-weight: 600; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin: 18px 0 10px 0; color: var(--accent-gold); }
+    .spec-preview-pane h3 { font-size: 13.5px; font-weight: 600; margin: 14px 0 8px 0; color: var(--accent-teal); }
+    .spec-preview-pane p { margin: 8px 0; color: var(--text-secondary); }
+    .spec-preview-pane ul, .spec-preview-pane ol { margin: 8px 0 8px 22px; color: var(--text-secondary); }
+    .spec-preview-pane li { margin: 3px 0; }
+    .spec-preview-pane blockquote { border-left: 3px solid var(--accent-teal); padding: 4px 12px; margin: 10px 0; color: var(--text-muted); background: var(--bg-tertiary); border-radius: 0 4px 4px 0; }
+    .spec-preview-pane table { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: 12px; }
+    .spec-preview-pane th, .spec-preview-pane td { border: 1px solid var(--border-color); padding: 6px 10px; text-align: left; }
+    .spec-preview-pane th { background: var(--bg-tertiary); font-weight: 600; color: var(--text-primary); }
+    .spec-preview-pane code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: 11.5px; background: var(--bg-tertiary); padding: 2px 5px; border-radius: 3px; color: var(--accent-teal); border: 1px solid var(--border-color); }
+    .spec-preview-pane pre { background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 4px; padding: 12px; overflow-x: auto; margin: 10px 0; }
+    .spec-preview-pane pre code { background: transparent; padding: 0; border: none; color: var(--text-primary); }
+    .spec-preview-pane hr { border: none; border-top: 1px solid var(--border-color); margin: 20px 0; }
+    .spec-preview-pane input[type="checkbox"] { margin-right: 6px; accent-color: var(--accent-teal); }
 
     /* MODALS */
     .modal-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); z-index: 1000; display: none; align-items: center; justify-content: center; }
@@ -1079,6 +1270,9 @@
       <button class="tab-btn" data-tab="tab-notes" title="All Director Annotations">
         <svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.269z" /></svg>
         <span id="notes-badge" class="tab-badge">0</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-spec" title="Project Spec & Markdown Docs">
+        <svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" /></svg>
       </button>
     </div>
 
@@ -1239,6 +1433,8 @@
           </div>
         </div>
 
+        <div id="master-side-resizer" class="side-resizer" title="Drag to resize sidebar"></div>
+
         <!-- RIGHT DRAWER: LIVE OVERRIDES & ACTIVE NOTES -->
         <div class="note-drawer">
           <div class="overrides-box">
@@ -1362,6 +1558,8 @@
           </div>
         </div>
 
+        <div id="sheet-side-resizer" class="side-resizer" title="Drag to resize chapter plan"></div>
+
         <div class="plan-table-pane">
           <div style="display:flex; justify-content:space-between; align-items:center;">
             <div style="font-size:13px; font-weight:700; color:var(--accent-gold);">NARRATIVE CHAPTER PLAN</div>
@@ -1392,6 +1590,8 @@
           <div id="assets-list" class="assets-scroll-list"></div>
           <div id="clips-sidebar-list" class="clips-scroll-list" style="display:none;"></div>
         </div>
+
+        <div id="assets-side-resizer" class="side-resizer" title="Drag to resize footage list"></div>
 
         <div class="asset-inspector">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
@@ -1546,6 +1746,72 @@
         </div>
 
         <div id="all-notes-container" style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px; padding-right:6px;"></div>
+      </div>
+    </div>
+
+    <!-- VIEW 6: PROJECT SPEC SHEET & MARKDOWN NOTES -->
+    <div id="tab-spec" class="view-panel">
+      <div class="spec-layout">
+        <div class="spec-sidebar">
+          <div class="spec-sidebar-header">
+            <span class="spec-sidebar-title">
+              <svg class="icon icon-sm" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" /></svg>
+              Spec & Docs
+            </span>
+            <div style="display:flex; gap:4px;">
+              <button id="btn-doc-new-folder" class="btn btn-icon-only" title="New Folder">
+                <svg class="icon icon-sm" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10.5v6m3-3H9m4.06-7.19l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" /></svg>
+              </button>
+              <button id="btn-doc-new-file" class="btn btn-icon-only btn-teal" title="New Note / Markdown Doc">
+                <svg class="icon icon-sm" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+              </button>
+            </div>
+          </div>
+
+          <div style="padding:6px 10px; border-bottom:1px solid var(--border-color);">
+            <input type="text" id="inp-doc-filter" class="form-control" placeholder="Search notes & specs..." style="padding:4px 8px; font-size:11px; width:100%;">
+          </div>
+
+          <div id="spec-file-tree" class="spec-file-tree"></div>
+        </div>
+
+        <div id="spec-sidebar-resizer" class="side-resizer" title="Drag to resize file tree"></div>
+
+        <div class="spec-main-area">
+          <div class="spec-toolbar">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span id="spec-cur-path" style="font-family:ui-monospace, monospace; font-size:11.5px; font-weight:600; color:var(--text-primary);">project-spec.md</span>
+              <span id="spec-status-pill" class="badge-status idle" style="font-size:9.5px;">SAVED</span>
+              <span id="spec-mtime-pill" style="font-size:10px; color:var(--text-muted);"></span>
+            </div>
+
+            <div style="display:flex; align-items:center; gap:8px;">
+              <div class="sidebar-tab-toggle" style="width:190px;">
+                <button id="btn-spec-mode-split" class="active">Split</button>
+                <button id="btn-spec-mode-edit">Edit</button>
+                <button id="btn-spec-mode-preview">Preview</button>
+              </div>
+
+              <button id="btn-doc-revert" class="btn btn-sm" title="Revert to disk version">
+                Revert
+              </button>
+              <button id="btn-doc-save" class="btn btn-sm btn-gold" title="Save file (Cmd+S)">
+                <span>Save</span>
+              </button>
+              <button id="btn-doc-delete" class="btn btn-icon-only btn-coral" title="Delete Note">
+                <svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="spec-editor-workspace">
+            <div id="spec-editor-pane" class="spec-editor-pane">
+              <textarea id="spec-editor-textarea" class="spec-editor-textarea" spellcheck="false" placeholder="# Project Notes..."></textarea>
+            </div>
+            <div id="spec-split-resizer" class="side-resizer" title="Drag to adjust split ratio"></div>
+            <div id="spec-preview-pane" class="spec-preview-pane"></div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1735,6 +2001,7 @@
 
   <!-- BUILD & RUN TERMINAL DRAWER -->
   <div id="build-terminal-drawer" class="terminal-drawer">
+    <div id="term-resizer" class="terminal-resizer" title="Drag to resize console height"></div>
     <div class="terminal-header">
       <div style="display:flex; align-items:center; gap:8px;">
         <span style="font-weight:600; color:var(--text-primary); font-size:11px; letter-spacing:0.5px; text-transform:uppercase;">Build Terminal</span>
@@ -2120,6 +2387,8 @@
       if (norm === 'tab-audio') {
         drawAudioWaveform();
         drawAudioFeatures();
+      } else if (norm === 'tab-spec') {
+        loadDocsList();
       }
     }
 
@@ -2140,20 +2409,40 @@
       const frames = state.audioFeatures;
       const stem = state.stems.find(s => s.id === state.masterAudioStem) || { color: '#64b5a0' };
       const color = stem.color || '#64b5a0';
-      const count = frames && frames.length ? frames.length : 120;
-      const barWidth = Math.max(1, W / count);
+      const numBins = Math.min(W, Math.max(80, Math.floor(W / 3)));
+      const binWidth = W / numBins;
       const midY = H / 2;
 
-      for (let i = 0; i < count; i++) {
-        const f = frames && frames.length ? frames[i] : [0.35 + 0.2 * Math.sin(i * 0.25), 0.4, 0.3, 0.2, (i % 4 === 0 ? 0.5 : 0.1), 0];
-        let amp = f[0] * 1.5;
-        if (state.masterAudioStem === 'bass') amp = f[1] * 1.8;
-        else if (state.masterAudioStem === 'drums') amp = (f[0] * 0.7 + f[4] * 1.5);
-        else if (state.masterAudioStem === 'glitch') amp = (f[5] * 2.2 + f[3] * 0.9);
-        amp = Math.min(1.0, Math.max(0.05, amp));
+      if (!frames || !frames.length) {
+        for (let i = 0; i < numBins; i++) {
+          const amp = 0.25 + 0.15 * Math.sin(i * 0.15);
+          const barH = amp * (H * 0.82);
+          ctx.fillStyle = color + '88';
+          ctx.fillRect(i * binWidth, midY - barH / 2, Math.max(1, binWidth - 0.5), barH);
+        }
+        return;
+      }
+
+      const framesPerBin = frames.length / numBins;
+      for (let b = 0; b < numBins; b++) {
+        const startF = Math.floor(b * framesPerBin);
+        const endF = Math.min(frames.length, Math.floor((b + 1) * framesPerBin));
+        let maxVal = 0;
+        let avgTransient = 0;
+        for (let f = startF; f < endF; f++) {
+          const fr = frames[f];
+          let val = fr[0] * 1.5;
+          if (state.masterAudioStem === 'bass') val = fr[1] * 1.8;
+          else if (state.masterAudioStem === 'drums') val = fr[0] * 0.7 + fr[4] * 1.5;
+          else if (state.masterAudioStem === 'glitch') val = fr[5] * 2.2 + fr[3] * 0.9;
+          maxVal = Math.max(maxVal, val);
+          avgTransient += fr[4] || 0;
+        }
+        const hasTransient = (endF > startF) && (avgTransient / (endF - startF) > 0.35);
+        const amp = Math.min(1.0, Math.max(0.04, maxVal));
         const barH = amp * (H * 0.88);
-        ctx.fillStyle = color + (f[4] > 0.4 ? 'dd' : '99');
-        ctx.fillRect(i * barWidth, midY - barH / 2, Math.max(1, barWidth - 0.5), barH);
+        ctx.fillStyle = color + (hasTransient ? 'ee' : '99');
+        ctx.fillRect(b * binWidth, midY - barH / 2, Math.max(1, binWidth - 0.5), barH);
       }
     }
 
@@ -2539,14 +2828,43 @@
       ctx.fillStyle = '#060a12';
       ctx.fillRect(0, 0, W, H);
 
+      // Center baseline
+      ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, H / 2);
+      ctx.lineTo(W, H / 2);
+      ctx.stroke();
+
       const curStem = state.stems.find(s => s.id === state.activeStemId) || { color: '#64b5a0' };
       const frames = state.audioFeatures.length ? state.audioFeatures : Array.from({ length: 120 }, (_, i) => [0.35 + 0.2 * Math.sin(i * 0.2), 0.3, 0.3, 0.2, 0.1, 0]);
-      const stepX = W / frames.length;
-      ctx.fillStyle = (curStem.color || '#64b5a0') + 'aa';
-      for (let i = 0; i < frames.length; i++) {
-        const barH = Math.max(2, frames[i][0] * H * 0.65);
-        ctx.fillRect(i * stepX, H / 2 - barH / 2, Math.max(1, stepX - 0.5), barH);
+
+      // Draw rich multi-layer waveform
+      const numBins = Math.min(W, Math.max(120, Math.floor(W / 2)));
+      const binWidth = W / numBins;
+      const framesPerBin = frames.length / numBins;
+
+      ctx.fillStyle = (curStem.color || '#64b5a0') + 'bb';
+      for (let b = 0; b < numBins; b++) {
+        const startF = Math.floor(b * framesPerBin);
+        const endF = Math.min(frames.length, Math.floor((b + 1) * framesPerBin));
+        let maxRms = 0;
+        let avgBass = 0;
+        let count = 0;
+        for (let f = startF; f < endF; f++) {
+          maxRms = Math.max(maxRms, frames[f][0]);
+          avgBass += frames[f][1];
+          count++;
+        }
+        if (count > 0) avgBass /= count;
+
+        const amp = Math.min(1.0, maxRms * 1.8 + avgBass * 0.2);
+        const barH = Math.max(2, amp * (H * 0.85));
+        const x = b * binWidth;
+        ctx.fillRect(x, (H - barH) / 2, Math.max(1, binWidth - 0.5), barH);
       }
+
+      // Playhead cursor
       const curX = (state.currentTime / Math.max(1, state.duration)) * W;
       ctx.strokeStyle = '#c07a78';
       ctx.lineWidth = 2;
@@ -2568,24 +2886,36 @@
       ctx.fillRect(0, 0, W, H);
       const frames = state.audioFeatures;
       if (!frames || !frames.length) return;
+
       const curves = [
-        { idx: 1, color: '#38bdf8' },
-        { idx: 2, color: '#a855f7' },
-        { idx: 3, color: '#fbbf24' },
-        { idx: 4, color: '#f43f5e' },
-        { idx: 5, color: '#10b981' }
+        { idx: 1, color: '#38bdf8', weight: 1.5 },
+        { idx: 2, color: '#a855f7', weight: 1.2 },
+        { idx: 3, color: '#fbbf24', weight: 1.2 },
+        { idx: 4, color: '#f43f5e', weight: 1.5 },
+        { idx: 5, color: '#10b981', weight: 1.2 }
       ];
+
       curves.forEach(c => {
         ctx.strokeStyle = c.color;
-        ctx.lineWidth = 1.2;
+        ctx.lineWidth = c.weight;
         ctx.beginPath();
         for (let i = 0; i < frames.length; i++) {
-          const x = (i / frames.length) * W;
-          const y = H - (frames[i][c.idx] * (H - 4));
+          const x = (i / (frames.length - 1)) * W;
+          const val = Math.min(1.0, Math.max(0, frames[i][c.idx] || 0));
+          const y = H - 2 - val * (H - 6);
           if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
         }
         ctx.stroke();
       });
+
+      // Playhead cursor
+      const curX = (state.currentTime / Math.max(1, state.duration)) * W;
+      ctx.strokeStyle = '#c07a78';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(curX, 0);
+      ctx.lineTo(curX, H);
+      ctx.stroke();
     }
 
     // --- VIEW 3: CONTACT SHEET & CHAPTER PLAN ---
@@ -3240,13 +3570,12 @@
               } else if (data.task?.artifact === 'audio' || data.task?.action === 'audio') {
                 const audio = document.getElementById('master-audio-preview');
                 if (audio) { audio.src = `/out/score.wav?t=${cacheBust}`; audio.load(); }
-                fetch('/api/features').then(r => r.arrayBuffer()).then(buf => {
-                  const floats = new Float32Array(buf);
-                  state.audioFeatures = [];
-                  for (let i = 0; i < floats.length; i += 6) {
-                    state.audioFeatures.push(Array.from(floats.subarray(i, i + 6)));
+                fetch(`/api/features?t=${cacheBust}`).then(r => r.json()).then(featData => {
+                  if (featData && Array.isArray(featData.frames)) {
+                    state.audioFeatures = featData.frames;
                   }
                   drawTimelineWaveform();
+                  drawAudioWaveform();
                   drawAudioFeatures();
                 }).catch(() => {});
                 showNotification(`Audio & features re-synthesized @ ${state.bpm} BPM`);
@@ -3604,6 +3933,437 @@
       });
     }
 
+    // --- RESIZABLE SPLITTERS & PANELS ---
+    function setupResizers() {
+      // 1. Restore saved sizes
+      const savedTermH = localStorage.getItem('slopscore_terminal_height');
+      if (savedTermH) document.documentElement.style.setProperty('--terminal-height', `${savedTermH}px`);
+      const savedMasterW = localStorage.getItem('slopscore_master_sidebar_w');
+      if (savedMasterW) document.documentElement.style.setProperty('--master-sidebar-width', `${savedMasterW}px`);
+      const savedSheetW = localStorage.getItem('slopscore_sheet_sidebar_w');
+      if (savedSheetW) document.documentElement.style.setProperty('--sheet-sidebar-width', `${savedSheetW}px`);
+      const savedAssetsW = localStorage.getItem('slopscore_assets_sidebar_w');
+      if (savedAssetsW) document.documentElement.style.setProperty('--assets-sidebar-width', `${savedAssetsW}px`);
+      const savedSpecW = localStorage.getItem('slopscore_spec_sidebar_w');
+      if (savedSpecW) document.documentElement.style.setProperty('--spec-sidebar-width', `${savedSpecW}px`);
+
+      // Generic splitter binder
+      function bindResizer(handleEl, onDrag) {
+        if (!handleEl) return;
+        handleEl.addEventListener('pointerdown', (e) => {
+          e.preventDefault();
+          handleEl.classList.add('is-dragging');
+          document.body.style.userSelect = 'none';
+
+          const onMove = (ev) => {
+            onDrag(ev);
+          };
+
+          const onUp = () => {
+            handleEl.classList.remove('is-dragging');
+            document.body.style.userSelect = '';
+            window.removeEventListener('pointermove', onMove);
+            window.removeEventListener('pointerup', onUp);
+          };
+
+          window.addEventListener('pointermove', onMove);
+          window.addEventListener('pointerup', onUp);
+        });
+      }
+
+      // Bottom Console Terminal Resizer (dragging changes height, pushing main-content up)
+      bindResizer(document.getElementById('term-resizer'), (e) => {
+        const h = Math.min(Math.max(100, window.innerHeight - e.clientY), window.innerHeight * 0.75);
+        document.documentElement.style.setProperty('--terminal-height', `${h}px`);
+        localStorage.setItem('slopscore_terminal_height', h);
+      });
+
+      // Master View Sidebar Resizer
+      bindResizer(document.getElementById('master-side-resizer'), (e) => {
+        const w = Math.min(Math.max(260, window.innerWidth - e.clientX), window.innerWidth - 320);
+        document.documentElement.style.setProperty('--master-sidebar-width', `${w}px`);
+        localStorage.setItem('slopscore_master_sidebar_w', w);
+      });
+
+      // Contact Sheet Plan Sidebar Resizer
+      bindResizer(document.getElementById('sheet-side-resizer'), (e) => {
+        const w = Math.min(Math.max(280, window.innerWidth - e.clientX), window.innerWidth - 320);
+        document.documentElement.style.setProperty('--sheet-sidebar-width', `${w}px`);
+        localStorage.setItem('slopscore_sheet_sidebar_w', w);
+      });
+
+      // Assets Sidebar Resizer
+      bindResizer(document.getElementById('assets-side-resizer'), (e) => {
+        const w = Math.min(Math.max(220, e.clientX), 550);
+        document.documentElement.style.setProperty('--assets-sidebar-width', `${w}px`);
+        localStorage.setItem('slopscore_assets_sidebar_w', w);
+      });
+
+      // Spec View Sidebar Resizer
+      bindResizer(document.getElementById('spec-sidebar-resizer'), (e) => {
+        const w = Math.min(Math.max(180, e.clientX), 480);
+        document.documentElement.style.setProperty('--spec-sidebar-width', `${w}px`);
+        localStorage.setItem('slopscore_spec_sidebar_w', w);
+      });
+
+      // Spec Split Resizer (between editor textarea and live preview)
+      bindResizer(document.getElementById('spec-split-resizer'), (e) => {
+        const workspace = document.querySelector('.spec-editor-workspace');
+        if (!workspace) return;
+        const rect = workspace.getBoundingClientRect();
+        const ratio = Math.min(Math.max(0.15, (e.clientX - rect.left) / rect.width), 0.85);
+        const editorPane = document.getElementById('spec-editor-pane');
+        if (editorPane) editorPane.style.flex = `0 0 ${(ratio * 100).toFixed(1)}%`;
+      });
+    }
+
+    // --- PROJECT SPEC SHEET & MARKDOWN / HTML NOTES ---
+    let activeDocPath = 'project-spec.md';
+    let docOriginalContent = '';
+    let docDebounceTimer = null;
+
+    function renderMarkdown(md) {
+      if (!md) return '';
+      let html = md
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/&lt;(\/?[a-zA-Z][a-zA-Z0-9-]*(\s+[^&]*)?)&gt;/g, '<$1>');
+
+      // Code blocks
+      html = html.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, (m, lang, code) => {
+        return `<pre><code class="language-${lang}">${code.trim()}</code></pre>`;
+      });
+
+      // Inline code
+      html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+      // Headings
+      html = html.replace(/^#### (.*$)/gim, '<h4>$1</h4>');
+      html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
+      html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
+      html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
+
+      // Horizontal rule
+      html = html.replace(/^\s*[-*_]{3,}\s*$/gim, '<hr>');
+
+      // Checkboxes
+      html = html.replace(/^[-*] \[x\] (.*$)/gim, '<div style="display:flex;align-items:center;gap:6px;margin:3px 0;"><input type="checkbox" checked disabled> <span>$1</span></div>');
+      html = html.replace(/^[-*] \[ \] (.*$)/gim, '<div style="display:flex;align-items:center;gap:6px;margin:3px 0;"><input type="checkbox" disabled> <span>$1</span></div>');
+
+      // Blockquotes
+      html = html.replace(/^\> (.*$)/gim, '<blockquote>$1</blockquote>');
+
+      // Bold & Italic & Strike
+      html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+      html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+      html = html.replace(/~~([^~]+)~~/g, '<del>$1</del>');
+
+      // Images
+      html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img alt="$1" src="$2" style="max-width:100%;border-radius:4px;border:1px solid var(--border-color);margin:6px 0;">');
+
+      // Links
+      html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" style="color:var(--accent-teal);text-decoration:underline;">$1</a>');
+
+      // Parse lines for tables and lists
+      const lines = html.split('\n');
+      const outLines = [];
+      let inTable = false;
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (line.startsWith('|') && line.endsWith('|')) {
+          const cells = line.slice(1, -1).split('|').map(c => c.trim());
+          if (cells.every(c => /^:?-+:?$/.test(c))) {
+            continue;
+          }
+          if (!inTable) {
+            inTable = true;
+            outLines.push('<table><thead><tr>' + cells.map(c => `<th>${c}</th>`).join('') + '</tr></thead><tbody>');
+          } else {
+            outLines.push('<tr>' + cells.map(c => `<td>${c}</td>`).join('') + '</tr>');
+          }
+        } else {
+          if (inTable) {
+            inTable = false;
+            outLines.push('</tbody></table>');
+          }
+          if (/^[-*]\s+(.*)$/.test(line)) {
+            outLines.push(`<li>${line.replace(/^[-*]\s+/, '')}</li>`);
+          } else if (/^\d+\.\s+(.*)$/.test(line)) {
+            outLines.push(`<li>${line.replace(/^\d+\.\s+/, '')}</li>`);
+          } else if (line.length > 0 && !line.startsWith('<h') && !line.startsWith('<pre') && !line.startsWith('<hr') && !line.startsWith('<blockquote') && !line.startsWith('<div') && !line.startsWith('<table')) {
+            outLines.push(`<p>${line}</p>`);
+          } else {
+            outLines.push(line);
+          }
+        }
+      }
+      if (inTable) outLines.push('</tbody></table>');
+
+      return outLines.join('\n');
+    }
+
+    async function loadDocsList() {
+      try {
+        const res = await fetch('/api/docs/list');
+        const data = await res.json();
+        const treeEl = document.getElementById('spec-file-tree');
+        if (!treeEl) return;
+        treeEl.innerHTML = '';
+
+        const filter = (document.getElementById('inp-doc-filter')?.value || '').toLowerCase().trim();
+        const files = (data.files || []).filter(f => !f.isDirectory);
+
+        // Sort: project-spec.md first, then alphabetically
+        files.sort((a, b) => {
+          if (a.isSpec) return -1;
+          if (b.isSpec) return 1;
+          return a.path.localeCompare(b.path);
+        });
+
+        files.forEach(f => {
+          if (filter && !f.path.toLowerCase().includes(filter)) return;
+          const item = document.createElement('div');
+          item.className = `spec-file-item ${f.path === activeDocPath ? 'active' : ''}`;
+          item.dataset.path = f.path;
+
+          const isSpec = f.isSpec || f.name.toLowerCase() === 'project-spec.md';
+          const iconSvg = isSpec
+            ? `<svg class="icon icon-sm" style="color:var(--accent-gold);" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" /></svg>`
+            : `<svg class="icon icon-sm" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" /></svg>`;
+
+          item.innerHTML = `
+            <div style="display:flex; align-items:center; gap:7px; overflow:hidden;">
+              ${iconSvg}
+              <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${f.path}</span>
+            </div>
+            ${isSpec ? '<span class="spec-file-badge">SPEC</span>' : ''}
+          `;
+
+          item.addEventListener('click', () => loadDocContent(f.path));
+          treeEl.appendChild(item);
+        });
+
+        if (!activeDocPath && files.length > 0) {
+          loadDocContent(files[0].path);
+        } else if (activeDocPath) {
+          loadDocContent(activeDocPath);
+        }
+      } catch (err) {
+        console.error('Failed to load docs list:', err);
+      }
+    }
+
+    async function loadDocContent(filePath) {
+      try {
+        activeDocPath = filePath;
+        document.querySelectorAll('.spec-file-item').forEach(el => {
+          el.classList.toggle('active', el.dataset.path === filePath);
+        });
+
+        const pathEl = document.getElementById('spec-cur-path');
+        if (pathEl) pathEl.textContent = filePath;
+
+        const res = await fetch(`/api/docs?path=${encodeURIComponent(filePath)}`);
+        const data = await res.json();
+        const content = data.content || '';
+        docOriginalContent = content;
+
+        const textarea = document.getElementById('spec-editor-textarea');
+        const preview = document.getElementById('spec-preview-pane');
+        const statusPill = document.getElementById('spec-status-pill');
+        const mtimePill = document.getElementById('spec-mtime-pill');
+
+        if (textarea) textarea.value = content;
+        if (preview) preview.innerHTML = renderMarkdown(content);
+        if (statusPill) {
+          statusPill.className = 'badge-status idle';
+          statusPill.textContent = 'SAVED';
+        }
+        if (mtimePill && data.mtime) {
+          const dt = new Date(data.mtime);
+          mtimePill.textContent = `Updated ${dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+        }
+
+        // Show/hide delete button for core spec
+        const btnDelete = document.getElementById('btn-doc-delete');
+        if (btnDelete) {
+          btnDelete.style.display = filePath === 'project-spec.md' ? 'none' : 'inline-flex';
+        }
+      } catch (err) {
+        console.error('Failed to load doc:', err);
+      }
+    }
+
+    async function saveActiveDoc() {
+      const textarea = document.getElementById('spec-editor-textarea');
+      const statusPill = document.getElementById('spec-status-pill');
+      if (!textarea || !activeDocPath) return;
+
+      const content = textarea.value;
+      if (statusPill) {
+        statusPill.className = 'badge-status running';
+        statusPill.textContent = 'SAVING...';
+      }
+
+      try {
+        const res = await fetch('/api/docs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: activeDocPath, content })
+        });
+        const data = await res.json();
+        if (data.success) {
+          docOriginalContent = content;
+          if (statusPill) {
+            statusPill.className = 'badge-status completed';
+            statusPill.textContent = 'SAVED';
+          }
+          const mtimePill = document.getElementById('spec-mtime-pill');
+          if (mtimePill && data.mtime) {
+            const dt = new Date(data.mtime);
+            mtimePill.textContent = `Saved ${dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+          }
+        } else {
+          throw new Error(data.error || 'Failed to save');
+        }
+      } catch (err) {
+        if (statusPill) {
+          statusPill.className = 'badge-status failed';
+          statusPill.textContent = 'SAVE ERROR';
+        }
+        console.error('Error saving doc:', err);
+      }
+    }
+
+    function setupSpecDocsView() {
+      const textarea = document.getElementById('spec-editor-textarea');
+      const preview = document.getElementById('spec-preview-pane');
+      const statusPill = document.getElementById('spec-status-pill');
+
+      if (textarea) {
+        textarea.addEventListener('input', () => {
+          if (statusPill) {
+            const isDirty = textarea.value !== docOriginalContent;
+            statusPill.className = isDirty ? 'badge-status running' : 'badge-status idle';
+            statusPill.textContent = isDirty ? 'UNSAVED' : 'SAVED';
+          }
+          clearTimeout(docDebounceTimer);
+          docDebounceTimer = setTimeout(() => {
+            if (preview) preview.innerHTML = renderMarkdown(textarea.value);
+          }, 120);
+        });
+
+        // Tab key support in textarea
+        textarea.addEventListener('keydown', (e) => {
+          if (e.key === 'Tab') {
+            e.preventDefault();
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            textarea.value = textarea.value.substring(0, start) + '  ' + textarea.value.substring(end);
+            textarea.selectionStart = textarea.selectionEnd = start + 2;
+          } else if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+            e.preventDefault();
+            saveActiveDoc();
+          }
+        });
+      }
+
+      document.getElementById('btn-doc-save')?.addEventListener('click', saveActiveDoc);
+
+      document.getElementById('btn-doc-revert')?.addEventListener('click', () => {
+        if (confirm('Revert all unsaved edits to the last saved file state?')) {
+          loadDocContent(activeDocPath);
+        }
+      });
+
+      document.getElementById('btn-doc-delete')?.addEventListener('click', async () => {
+        if (!activeDocPath || activeDocPath === 'project-spec.md') return;
+        if (confirm(`Delete note file "${activeDocPath}"?`)) {
+          try {
+            await fetch('/api/docs/delete', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ path: activeDocPath })
+            });
+            activeDocPath = 'project-spec.md';
+            await loadDocsList();
+          } catch (err) {
+            console.error('Failed to delete doc:', err);
+          }
+        }
+      });
+
+      document.getElementById('btn-doc-new-file')?.addEventListener('click', async () => {
+        const name = prompt('Enter new note filename or path (e.g. notes/audio-structure.md):', 'notes/new-note.md');
+        if (!name || !name.trim()) return;
+        const clean = name.trim().endsWith('.md') ? name.trim() : `${name.trim()}.md`;
+        try {
+          await fetch('/api/docs/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ path: clean, isDirectory: false })
+          });
+          activeDocPath = clean;
+          await loadDocsList();
+        } catch (err) {
+          console.error('Failed to create doc:', err);
+        }
+      });
+
+      document.getElementById('btn-doc-new-folder')?.addEventListener('click', async () => {
+        const folder = prompt('Enter folder path (e.g. notes/chapters):', 'notes');
+        if (!folder || !folder.trim()) return;
+        try {
+          await fetch('/api/docs/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ path: folder.trim(), isDirectory: true })
+          });
+          await loadDocsList();
+        } catch (err) {
+          console.error('Failed to create folder:', err);
+        }
+      });
+
+      document.getElementById('inp-doc-filter')?.addEventListener('input', () => {
+        loadDocsList();
+      });
+
+      // View mode toggles: Split, Edit, Preview
+      const btnSplit = document.getElementById('btn-spec-mode-split');
+      const btnEdit = document.getElementById('btn-spec-mode-edit');
+      const btnPreview = document.getElementById('btn-spec-mode-preview');
+      const editorPane = document.getElementById('spec-editor-pane');
+      const splitResizer = document.getElementById('spec-split-resizer');
+
+      function setSpecMode(mode) {
+        btnSplit?.classList.toggle('active', mode === 'split');
+        btnEdit?.classList.toggle('active', mode === 'edit');
+        btnPreview?.classList.toggle('active', mode === 'preview');
+
+        if (mode === 'split') {
+          if (editorPane) { editorPane.style.display = 'flex'; editorPane.style.flex = '1'; }
+          if (splitResizer) splitResizer.style.display = 'block';
+          if (preview) { preview.style.display = 'flex'; preview.style.flex = '1'; }
+        } else if (mode === 'edit') {
+          if (editorPane) { editorPane.style.display = 'flex'; editorPane.style.flex = '1'; }
+          if (splitResizer) splitResizer.style.display = 'none';
+          if (preview) preview.style.display = 'none';
+        } else if (mode === 'preview') {
+          if (editorPane) editorPane.style.display = 'none';
+          if (splitResizer) splitResizer.style.display = 'none';
+          if (preview) { preview.style.display = 'flex'; preview.style.flex = '1'; }
+          if (preview && textarea) preview.innerHTML = renderMarkdown(textarea.value);
+        }
+      }
+
+      btnSplit?.addEventListener('click', () => setSpecMode('split'));
+      btnEdit?.addEventListener('click', () => setSpecMode('edit'));
+      btnPreview?.addEventListener('click', () => setSpecMode('preview'));
+    }
+
     // --- INITIALIZE STUDIO ---
     async function init() {
       setupTheme();
@@ -3620,6 +4380,8 @@
       setupRunControls();
       await loadVersions();
       await loadNotes();
+      setupResizers();
+      setupSpecDocsView();
       updateTransportReadout(0);
 
       // Initialize WebMCP in-browser tool registry & Genereti Assistant Drawer

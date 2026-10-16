@@ -19,7 +19,7 @@ export function commandPresets(root) {
   const r = q(root);
   return {
     build: { title: 'Recompile Native Renderer', artifact: 'binary', description: 'clang -O3 build of the native CoreGraphics renderer into out/native-render', cmd: cli('build', r) },
-    audio: { title: 'Synthesize Audio & Stems', artifact: 'audio', description: 'Synthesize/load the score, export stems, extract features.bin', cmd: cli('audio', r, '--stems') },
+    audio: { title: 'Synthesize Audio & Stems', artifact: 'audio', description: 'Synthesize/load the score, export stems, extract features.bin', cmd: cli('audio', r, '--stems', '--force') },
     features: { title: 'Extract Audio Features', artifact: 'features', description: 'Analyze the score into out/features.bin (rms, bass, mid, high, transient, glitch)', cmd: cli('features', r) },
     bank: { title: 'Build Asset Bank', artifact: 'bank', description: 'Sample chapter clips/assets into out/archive_bank.bin for the native renderer', cmd: cli('bank', r) },
     sheet: { title: 'Contact Sheet (12 frames)', artifact: 'sheet', description: 'Render keyframes into out/sheet.jpg', cmd: cli('sheet', r) },

@@ -109,6 +109,7 @@ async function run() {
       console.log(`[Slopscore] Synthesizing ${loaded.project.audio.durationSeconds}s score @ ${loaded.project.audio.bpm} BPM...`);
       const res = await synthesizeAudio(loaded, {
         stems: Boolean(flags.stems),
+        force: flags.force !== undefined ? Boolean(flags.force) : true,
         outPath: typeof flags.out === 'string' ? flags.out : null
       });
       console.log(`✓ Score written: ${res.scorePath}`);
