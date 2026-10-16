@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Slopscore 2.0 — Deterministic Renderer Host</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: #04060a;
+      overflow: hidden;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+    #stage {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #stage canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "/slopscore/node_modules/three/build/three.module.js",
+      "three/addons/": "/slopscore/node_modules/three/examples/jsm/",
+      "pixi.js": "/slopscore/node_modules/pixi.js/dist/pixi.min.mjs",
+      "p5": "/slopscore/renderers/p5js/p5-esm.js",
+      "gsap": "/slopscore/node_modules/gsap/index.js",
+      "slopscore/": "/slopscore/kit/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="stage"></div>
+  <script type="module">
+    import { mountRenderer } from '/slopscore/renderers/shared/host-runtime.js';
+
+    const params = new URLSearchParams(window.location.search);
+    const rendererId = params.get('renderer') || undefined;
+    const apiOrigin = (params.get('api') || window.location.origin).replace(/\/+$/, '');
+    const overrideW = params.get('w') ? Number(params.get('w')) : undefined;
+    const overrideH = params.get('h') ? Number(params.get('h')) : undefined;
+
+    const stage = document.getElementById('stage');
+
+    let mounted = null;
+    let readbackCanvas = null;
+    let readbackCtx = null;
+
+    const readyPromise = (async () => {
+      const res = await fetch(`${apiOrigin}/api/project`);
+      if (!res.ok) throw new Error(`Failed to fetch /api/project: ${res.status}`);
+      const projectData = await res.json();
+      const [W, H] = [
+        overrideW || projectData.project?.resolution?.[0] || 1280,
+        overrideH || projectData.project?.resolution?.[1] || 720
+      ];
+      stage.style.width = `${W}px`;
+      stage.style.height = `${H}px`;
+
+      mounted = await mountRenderer({
+        container: stage,
+        rendererId,
+        projectData,
+        width: W,
+        height: H,
+        baseUrl: `${apiOrigin}/project`
+      });
+
+      readbackCanvas = document.createElement('canvas');
+      readbackCanvas.width = W;
+      readbackCanvas.height = H;
+      readbackCtx = readbackCanvas.getContext('2d', { willReadFrequently: true });
+
+      window.__slopscore.canvas = mounted.canvas;
+      window.__slopscore.meta = mounted.meta;
+      window.__slopscore.mounted = mounted;
+      await mounted.renderFrame(0);
+      return mounted;
+    })();
+
+    window.__slopscore = {
+      ready: readyPromise,
+      canvas: null,
+      meta: null,
+      mounted: null,
+      async renderFrame(index) {
+        const m = await readyPromise;
+        return await m.renderFrame(index);
+      },
+      async renderAt(timeSec) {
+        const m = await readyPromise;
+        return await m.renderAt(timeSec);
+      },
+      getDataURL(type = 'image/jpeg', quality = 0.92) {
+        if (!mounted?.canvas) return '';
+        return mounted.canvas.toDataURL(type, quality);
+      },
+      getRGBA() {
+        if (!mounted?.canvas || !readbackCtx) return null;
+        readbackCtx.clearRect(0, 0, readbackCanvas.width, readbackCanvas.height);
+        readbackCtx.drawImage(mounted.canvas, 0, 0, readbackCanvas.width, readbackCanvas.height);
+        return readbackCtx.getImageData(0, 0, readbackCanvas.width, readbackCanvas.height).data;
+      }
+    };
+  </script>
+</body>
+</html>

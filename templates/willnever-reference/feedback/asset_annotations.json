@@ -1,0 +1,52 @@
+{
+  "westinghouse_timechecks_1904.webm": {
+    "tags": ["industrial", "labor", "time-study", "1904", "punch-clock"],
+    "annotations": "Westinghouse factory shift workers punching time clocks. Note: initial 4.5s contains LOC copyright slate; use clips starting at 4.5s or later. Strong vertical line cadence.",
+    "rating": 5
+  },
+  "westinghouse_welding_1904.webm": {
+    "tags": ["industrial", "welding", "fire", "sparks", "high-contrast"],
+    "annotations": "Dramatic radial sparks and glowing steel ring welding. High dynamic range makes this prime material for particle generation and audio-reactive thresholding. Bypasses first 5s slate.",
+    "rating": 5
+  },
+  "edison_butterfly_1894.ogv": {
+    "tags": ["annabelle", "dance", "butterfly", "wings", "luma-key"],
+    "annotations": "Annabelle Whitford performing the Butterfly Dance at Edison Black Maria studio. Fabric wings with hand-painted tinting cues. Clean from 3.8s onwards.",
+    "rating": 5
+  },
+  "edison_serpentine_1894.ogv": {
+    "tags": ["annabelle", "dance", "serpentine", "silk", "waves"],
+    "annotations": "Fluid silk swirls creating organic spiral vortices. Excellent source for curl noise particle vector field advection.",
+    "rating": 4
+  },
+  "edison_sneeze_1894.webm": {
+    "tags": ["fred-ott", "sneeze", "edison", "cellular-automata", "face"],
+    "annotations": "Fred Ott's Sneeze (1894), one of the earliest copyrighted motion pictures. High keypoint density on facial features for cellular automata pixel matrix treatment.",
+    "rating": 4
+  },
+  "oscilloscope_pulse.ogv": {
+    "tags": ["oscilloscope", "waveform", "electronic", "green", "lissajous"],
+    "annotations": "Analog CRT oscilloscope traces. Geometric Lissajous orbits and high-voltage pulse sweeps suitable for wireframe and vector overlays.",
+    "rating": 5
+  },
+  "crystal_microscope.ogv": {
+    "tags": ["crystal", "microscope", "fractal", "growth", "birefringence"],
+    "annotations": "Microscopic polarized light footage of chemical crystal nucleation and growth. Complex branching geometries match the harmonic pad layer.",
+    "rating": 4
+  },
+  "sunflower_timelapse.ogv": {
+    "tags": ["botanical", "timelapse", "fibonacci", "spiral", "golden-ratio"],
+    "annotations": "Timelapse recording of sunflower blooming spiral. Mathematical golden ratio seed placement ties directly into the generative geometry.",
+    "rating": 4
+  },
+  "muybridge_horse_1887.gif": {
+    "tags": ["muybridge", "chronophotography", "horse", "gallop", "proto-cinema"],
+    "annotations": "The classic 1887 photographic plate 'The Horse in Motion'. 16 sequential camera exposures showing biomechanical flight phase.",
+    "rating": 5
+  },
+  "grammatizator_v4.mp4": {
+    "tags": ["prior-render", "v4", "coregraphics", "slopscore"],
+    "annotations": "Prior rendered version 4. Can be sampled for second-generation hybrid composites, glitch feedback loops, and 3D wireframe snippets.",
+    "rating": 5
+  }
+}

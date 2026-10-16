@@ -1,0 +1,3518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Slopscore 2.0 — Director Studio</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "/slopscore/node_modules/three/build/three.module.js",
+      "three/addons/": "/slopscore/node_modules/three/examples/jsm/",
+      "pixi.js": "/slopscore/node_modules/pixi.js/dist/pixi.min.mjs",
+      "p5": "/slopscore/renderers/p5js/p5-esm.js",
+      "gsap": "/slopscore/node_modules/gsap/index.js",
+      "slopscore/": "/slopscore/kit/"
+    }
+  }
+  </script>
+  <style>
+    :root {
+      --bg-primary: #0e0f12;
+      --bg-secondary: #141518;
+      --bg-tertiary: #1b1d22;
+      --bg-card: #141518;
+      --bg-card-hover: #1c1e24;
+      --bg-hover: #24262d;
+      --bg-active: #2d3039;
+      --border-color: #262830;
+      --border-focus: #424654;
+      --text-primary: #e4e5e8;
+      --text-secondary: #9a9ea6;
+      --text-muted: #62666f;
+
+      /* Subdued AMS Accents */
+      --accent-teal: #64b5a0;
+      --accent-gold: #c6a66d;
+      --accent-coral: #c07a78;
+      --accent-blue: #7ba3c4;
+      --accent-purple: #9b8ec4;
+      --accent-emerald: #8fab96;
+
+      --bg-dark: var(--bg-primary);
+      --border: var(--border-color);
+      --border-bright: var(--border-focus);
+      --text: var(--text-primary);
+      --text-dim: var(--text-secondary);
+      --radius: 6px;
+    }
+
+    :root[data-theme="light"] {
+      color-scheme: light;
+      --bg-primary: #efefec;
+      --bg-secondary: #f8f8f6;
+      --bg-tertiary: #e7e7e3;
+      --bg-card: #f8f8f6;
+      --bg-card-hover: #edece7;
+      --bg-hover: #deded9;
+      --bg-active: #d4d4ce;
+      --border-color: #d6d6d0;
+      --border-focus: #a8a9a2;
+      --text-primary: #1f2023;
+      --text-secondary: #55585e;
+      --text-muted: #8b8e94;
+
+      --accent-teal: #4b8d7b;
+      --accent-gold: #9d7d42;
+      --accent-coral: #aa5553;
+      --accent-blue: #557b9c;
+      --accent-purple: #796aa4;
+      --accent-emerald: #5c8868;
+    }
+
+    :root[data-theme="dark"] { color-scheme: dark; }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    svg.icon {
+      width: 15px;
+      height: 15px;
+      display: inline-block;
+      vertical-align: middle;
+      stroke-width: 1.8;
+      fill: none;
+      stroke: currentColor;
+      flex-shrink: 0;
+    }
+    svg.icon-sm { width: 13px; height: 13px; }
+    svg.icon-lg { width: 17px; height: 17px; }
+
+    header {
+      height: 42px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      z-index: 100;
+      user-select: none;
+      gap: 10px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .brand-badge {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      color: var(--accent-teal);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+      cursor: pointer;
+    }
+    .brand-badge:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+      border-color: var(--border-focus);
+    }
+
+    .project-title-pill {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: 0.03em;
+      max-width: 180px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .version-cluster {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 2px 6px;
+    }
+    .ver-label {
+      font-size: 9.5px;
+      font-weight: 700;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+    }
+    .ver-select {
+      background: transparent;
+      border: none;
+      color: var(--text-primary);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      outline: none;
+      max-width: 135px;
+      text-overflow: ellipsis;
+    }
+    .ver-select option {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+    }
+
+    .nav-tabs {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .tab-btn {
+      width: 32px;
+      height: 28px;
+      padding: 0;
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      border-radius: 6px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      transition: all 0.15s ease;
+    }
+    .tab-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
+    .tab-btn.active {
+      background: var(--bg-tertiary);
+      border-color: var(--border-color);
+      color: var(--accent-teal);
+    }
+
+    .tab-badge {
+      position: absolute;
+      top: -3px;
+      right: -3px;
+      background: var(--accent-coral);
+      color: #fff;
+      font-size: 9px;
+      font-weight: 700;
+      height: 14px;
+      min-width: 14px;
+      padding: 0 3px;
+      border-radius: 7px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      pointer-events: none;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .btn {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+      line-height: 1;
+      white-space: nowrap;
+    }
+    .btn:hover {
+      background: var(--bg-hover);
+      border-color: var(--border-focus);
+      color: var(--text-primary);
+    }
+    .btn:active { background: var(--bg-active); }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .btn-icon-only {
+      width: 28px;
+      height: 26px;
+      padding: 0 !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      flex-shrink: 0;
+    }
+
+    .btn-gold {
+      color: var(--accent-gold);
+      border-color: color-mix(in srgb, var(--accent-gold) 35%, var(--border-color));
+    }
+    .btn-gold:hover {
+      background: color-mix(in srgb, var(--accent-gold) 15%, var(--bg-hover));
+      border-color: var(--accent-gold);
+      color: var(--accent-gold);
+    }
+
+    .btn-coral {
+      color: var(--accent-coral);
+      border-color: color-mix(in srgb, var(--accent-coral) 35%, var(--border-color));
+    }
+    .btn-coral:hover {
+      background: color-mix(in srgb, var(--accent-coral) 15%, var(--bg-hover));
+      border-color: var(--accent-coral);
+      color: var(--accent-coral);
+    }
+
+    .btn-teal {
+      color: var(--accent-teal);
+      border-color: color-mix(in srgb, var(--accent-teal) 35%, var(--border-color));
+    }
+    .btn-teal:hover, .btn-teal.active {
+      background: color-mix(in srgb, var(--accent-teal) 15%, var(--bg-hover));
+      border-color: var(--accent-teal);
+      color: var(--accent-teal);
+    }
+
+    .btn-sm { padding: 3px 7px; font-size: 11px; }
+
+    .run-dock {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      background: var(--bg-tertiary);
+      padding: 2px 4px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+    }
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      display: inline-block;
+      margin-left: 2px;
+      transition: all 0.2s ease;
+    }
+    .status-dot.running {
+      background: var(--accent-teal);
+      box-shadow: 0 0 6px var(--accent-teal);
+      animation: pulseDot 1s infinite alternate;
+    }
+    @keyframes pulseDot {
+      from { opacity: 0.4; transform: scale(0.9); }
+      to { opacity: 1; transform: scale(1.15); }
+    }
+
+    /* BUILD TERMINAL DRAWER */
+    .terminal-drawer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 250px;
+      background: var(--bg-primary);
+      border-top: 1px solid var(--border-focus);
+      box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.45);
+      z-index: 500;
+      display: flex;
+      flex-direction: column;
+      transform: translateY(100%);
+      transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .terminal-drawer.open { transform: translateY(0); }
+    .terminal-header {
+      height: 36px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      user-select: none;
+    }
+    .badge-status {
+      font-size: 9.5px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      letter-spacing: 0.5px;
+    }
+    .badge-status.idle { background: var(--bg-tertiary); color: var(--text-muted); border: 1px solid var(--border-color); }
+    .badge-status.running { background: color-mix(in srgb, var(--accent-teal) 20%, transparent); color: var(--accent-teal); border: 1px solid var(--accent-teal); }
+    .badge-status.completed { background: color-mix(in srgb, var(--accent-emerald) 20%, transparent); color: var(--accent-emerald); border: 1px solid var(--accent-emerald); }
+    .badge-status.failed { background: color-mix(in srgb, var(--accent-coral) 20%, transparent); color: var(--accent-coral); border: 1px solid var(--accent-coral); }
+    .term-cmd { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: var(--text-secondary); max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .term-timer { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: var(--accent-gold); font-weight: 600; }
+    .terminal-body {
+      flex: 1;
+      padding: 10px 14px;
+      overflow-y: auto;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 11.5px;
+      line-height: 1.45;
+      color: var(--text-secondary);
+      background: var(--bg-primary);
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .terminal-line { white-space: pre-wrap; word-break: break-all; }
+    .terminal-line.err { color: var(--accent-coral); }
+    .terminal-line.info { color: var(--accent-blue); }
+    .terminal-line.success { color: var(--accent-emerald); font-weight: 600; }
+
+    /* SLIDE-OVER ASSISTANT DRAWER */
+    .assistant-drawer {
+      position: fixed;
+      top: 42px;
+      right: 0;
+      bottom: 0;
+      width: 390px;
+      max-width: 92vw;
+      background: var(--bg-secondary);
+      border-left: 1px solid var(--border-focus);
+      box-shadow: -8px 0 28px rgba(0, 0, 0, 0.5);
+      z-index: 450;
+      transform: translateX(100%);
+      transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      flex-direction: column;
+    }
+    .assistant-drawer.open { transform: translateX(0); }
+
+    /* NOTES FILTER BAR & BADGES */
+    .notes-filter-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 6px 10px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .filter-pill {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      padding: 3px 9px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .filter-pill:hover { background: var(--bg-hover); color: var(--text-primary); border-color: var(--border-focus); }
+    .filter-pill.active {
+      background: color-mix(in srgb, var(--accent-teal) 15%, var(--bg-tertiary));
+      border-color: var(--accent-teal);
+      color: var(--accent-teal);
+      font-weight: 600;
+    }
+    .note-ver-badge {
+      background: var(--bg-tertiary);
+      color: var(--accent-gold);
+      border: 1px solid color-mix(in srgb, var(--accent-gold) 40%, var(--border-color));
+      font-size: 10px;
+      font-weight: 600;
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+    }
+    .note-archived-badge {
+      background: var(--bg-tertiary);
+      color: var(--text-muted);
+      border: 1px solid var(--border-color);
+      font-size: 9.5px;
+      font-weight: 600;
+      padding: 1px 4px;
+      border-radius: 3px;
+    }
+    .note-card.is-archived { opacity: 0.55; border-style: dashed; }
+    .note-card.is-archived:hover { opacity: 0.95; }
+
+    /* MAIN CONTAINER & VIEWS */
+    #main-content {
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+    }
+    .view-panel {
+      position: absolute;
+      inset: 0;
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .view-panel.active { display: flex; }
+
+    /* VIEW 1: MASTER CUT REVIEW */
+    .master-layout {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      overflow: hidden;
+    }
+    .player-section {
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+      background: #000;
+      overflow: hidden;
+    }
+    .video-viewport {
+      flex: 1;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #030508;
+      overflow: hidden;
+    }
+    #master-video {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
+    }
+    #live-renderer-container {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: #030508;
+    }
+    #live-renderer-container canvas {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+    .video-overlay-info {
+      position: absolute;
+      top: 14px;
+      left: 16px;
+      display: flex;
+      gap: 8px;
+      pointer-events: none;
+      z-index: 10;
+    }
+    .overlay-pill {
+      background: rgba(5, 10, 20, 0.8);
+      border: 1px solid var(--border);
+      color: var(--accent-teal);
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 11px;
+      backdrop-filter: blur(4px);
+    }
+
+    /* TRANSPORT & TIMELINE */
+    .transport-bar {
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border-color);
+      padding: 6px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .timeline-container {
+      position: relative;
+      height: 78px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      cursor: pointer;
+      user-select: none;
+      overflow: hidden;
+    }
+    .timeline-chapters {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 20px;
+      display: flex;
+      border-bottom: 1px solid var(--border-color);
+      z-index: 6;
+      background: var(--bg-secondary);
+    }
+    .chapter-block {
+      height: 100%;
+      position: relative;
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      padding: 0 6px;
+      font-size: 9.5px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      opacity: 0.85;
+      transition: opacity 0.15s, background-color 0.15s;
+    }
+    .chapter-block:hover { opacity: 1; filter: brightness(1.2); }
+    .timeline-audio-lane {
+      position: absolute;
+      top: 20px;
+      left: 0;
+      right: 0;
+      height: 44px;
+      background: color-mix(in srgb, var(--bg-primary) 92%, #000);
+      overflow: hidden;
+    }
+    #timeline-waveform-canvas, #timeline-musical-grid {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    #timeline-waveform-canvas { z-index: 1; }
+    #timeline-musical-grid { z-index: 2; }
+    .timeline-in-out {
+      position: absolute;
+      top: 20px;
+      height: 44px;
+      background: color-mix(in srgb, var(--accent-teal) 22%, transparent);
+      border-left: 2px solid var(--accent-teal);
+      border-right: 2px solid var(--accent-teal);
+      pointer-events: none;
+      display: none;
+      z-index: 3;
+    }
+    .timeline-pins {
+      position: absolute;
+      top: 20px;
+      left: 0;
+      right: 0;
+      height: 44px;
+      pointer-events: none;
+      z-index: 4;
+    }
+    .time-pin {
+      position: absolute;
+      top: 3px;
+      width: 11px;
+      height: 11px;
+      margin-left: -5.5px;
+      background: var(--accent-gold);
+      border: 1px solid var(--bg-primary);
+      transform: rotate(45deg);
+      cursor: pointer;
+      pointer-events: auto;
+      z-index: 10;
+      transition: transform 0.1s ease;
+    }
+    .time-pin:hover { transform: rotate(45deg) scale(1.35); background: #fff; }
+    .timeline-scrubber {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 14px;
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border-color);
+      z-index: 5;
+    }
+    .playhead-line {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: var(--accent-coral);
+      pointer-events: none;
+      z-index: 20;
+    }
+    .playhead-line::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -4px;
+      width: 10px;
+      height: 7px;
+      background: var(--accent-coral);
+      clip-path: polygon(0 0, 100% 0, 50% 100%);
+    }
+    .timeline-hover-guide {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 1px;
+      background: rgba(255,255,255,0.3);
+      pointer-events: none;
+      z-index: 15;
+      display: none;
+    }
+    .timeline-hover-tip {
+      position: absolute;
+      bottom: 18px;
+      transform: translateX(-50%);
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      font-size: 10px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      padding: 2px 6px;
+      border-radius: 3px;
+      white-space: nowrap;
+      pointer-events: none;
+      z-index: 30;
+      display: none;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    }
+
+    .controls-row {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scrollbar-width: none;
+    }
+    .controls-row::-webkit-scrollbar { display: none; }
+    .controls-group { display: flex; align-items: center; gap: 3px; flex-shrink: 0; }
+    .controls-divider { width: 1px; height: 16px; background: var(--border-color); margin: 0 2px; flex-shrink: 0; }
+
+    .time-readout-wrap {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      cursor: pointer;
+      user-select: none;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      min-width: 110px;
+      flex-shrink: 0;
+      transition: border-color 0.15s;
+    }
+    .time-readout-wrap:hover { border-color: var(--accent-teal); }
+    .time-primary {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent-teal);
+      line-height: 1.1;
+    }
+    .time-secondary {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 9.5px;
+      color: var(--text-muted);
+      line-height: 1.1;
+    }
+    .bpm-cluster {
+      display: flex;
+      align-items: center;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      padding: 0 5px;
+      height: 24px;
+      gap: 3px;
+    }
+    .bpm-cluster input {
+      background: transparent;
+      border: none;
+      color: var(--text-primary);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 11px;
+      width: 36px;
+      text-align: right;
+      padding: 0;
+      outline: none;
+    }
+    .bpm-cluster .bpm-label { font-size: 9px; font-weight: 600; color: var(--text-muted); }
+    .audio-vol-slider { width: 52px; accent-color: var(--accent-teal); height: 4px; cursor: pointer; }
+
+    /* MUSICAL CUES BAR IN NOTE MODAL */
+    .musical-cues-bar {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-wrap: wrap;
+      padding: 6px 8px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      margin-bottom: 12px;
+    }
+    .cues-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-right: 2px;
+    }
+    .cue-pill {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .cue-pill:hover { background: var(--bg-tertiary); color: var(--accent-teal); border-color: var(--accent-teal); }
+
+    /* RIGHT DRAWER / NOTE & LIVE OVERRIDES PANEL */
+    .note-drawer {
+      background: var(--bg-secondary);
+      border-left: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .drawer-header {
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-secondary);
+    }
+    .drawer-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .overrides-box {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border-color);
+      background: var(--bg-tertiary);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 10.5px;
+    }
+    .override-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .override-row input[type="range"] {
+      flex: 1;
+      accent-color: var(--accent-teal);
+      height: 4px;
+    }
+    .notes-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .note-card {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      transition: all 0.15s ease;
+      cursor: pointer;
+    }
+    .note-card:hover { border-color: var(--border-focus); background: var(--bg-hover); }
+    .note-card-header { display: flex; align-items: center; justify-content: space-between; font-size: 10.5px; }
+    .note-time-badge {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      font-weight: 500;
+      font-size: 10px;
+    }
+    .note-status-badge { font-size: 9.5px; padding: 1px 5px; border-radius: 3px; text-transform: uppercase; font-weight: 600; }
+    .status-fix { background: color-mix(in srgb, var(--accent-coral) 15%, transparent); color: var(--accent-coral); border: 1px solid color-mix(in srgb, var(--accent-coral) 35%, transparent); }
+    .status-idea { background: color-mix(in srgb, var(--accent-gold) 15%, transparent); color: var(--accent-gold); border: 1px solid color-mix(in srgb, var(--accent-gold) 35%, transparent); }
+    .status-approved, .status-resolved { background: color-mix(in srgb, var(--accent-emerald) 15%, transparent); color: var(--accent-emerald); border: 1px solid color-mix(in srgb, var(--accent-emerald) 35%, transparent); }
+    .status-loop { background: color-mix(in srgb, var(--accent-blue) 15%, transparent); color: var(--accent-blue); border: 1px solid color-mix(in srgb, var(--accent-blue) 35%, transparent); }
+    .status-audio { background: color-mix(in srgb, var(--accent-purple) 15%, transparent); color: var(--accent-purple); border: 1px solid color-mix(in srgb, var(--accent-purple) 35%, transparent); }
+    .note-card-title { font-size: 12px; font-weight: 600; color: var(--text-primary); }
+    .note-card-body { font-size: 11.5px; color: var(--text-secondary); line-height: 1.4; white-space: pre-wrap; }
+    .note-card-media { margin-top: 3px; border-radius: 4px; overflow: hidden; max-height: 120px; border: 1px solid var(--border-color); }
+    .note-card-media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .note-card-footer { display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
+    /* VIEW 2: MUSIC & AUDIO EDITOR */
+    .audio-editor-layout { flex: 1; display: grid; grid-template-columns: 460px 1fr; overflow: hidden; }
+    .stems-mixer-pane { background: var(--bg-secondary); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; overflow: hidden; }
+    .stems-mixer-header { padding: 8px 12px; background: var(--bg-secondary); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+    .stems-list { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+    .stem-card { background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; transition: all 0.15s ease; cursor: pointer; }
+    .stem-card:hover { border-color: var(--border-focus); background: var(--bg-hover); }
+    .stem-card.active { border-color: var(--accent-teal); background: color-mix(in srgb, var(--accent-teal) 10%, var(--bg-tertiary)); }
+    .stem-card-top { display: flex; align-items: center; justify-content: space-between; }
+    .stem-title-wrap { display: flex; align-items: center; gap: 6px; }
+    .stem-color-indicator { width: 8px; height: 8px; border-radius: 50%; }
+    .stem-name { font-size: 12px; font-weight: 600; color: var(--text-primary); }
+    .stem-btn-group { display: flex; gap: 3px; }
+    .btn-solo, .btn-mute {
+      width: 22px; height: 20px; padding: 0; display: inline-flex; align-items: center; justify-content: center;
+      border-radius: 4px; font-size: 9.5px; font-weight: 600; cursor: pointer;
+      border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-muted);
+    }
+    .btn-solo.active { background: var(--accent-gold); color: #000; border-color: var(--accent-gold); font-weight: 700; }
+    .btn-mute.active { background: var(--accent-coral); color: #fff; border-color: var(--accent-coral); font-weight: 700; }
+    .stem-controls-row { display: flex; align-items: center; gap: 8px; font-size: 10.5px; }
+    .stem-volume-slider { flex: 1; accent-color: var(--accent-teal); cursor: pointer; }
+    .stem-desc { font-size: 11px; color: var(--text-secondary); line-height: 1.35; }
+    .audio-inspector-pane { background: var(--bg-primary); display: flex; flex-direction: column; overflow-y: auto; padding: 16px; gap: 14px; }
+    .waveform-visualizer-box { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 12px; display: flex; flex-direction: column; gap: 8px; position: relative; }
+    .canvas-container { width: 100%; height: 130px; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 4px; position: relative; cursor: pointer; }
+    #audio-waveform-canvas, #audio-features-canvas { width: 100%; height: 100%; display: block; }
+
+    /* VIEW 3: CONTACT SHEET & STORYBOARD PLAN */
+    .sheet-layout { flex: 1; display: grid; grid-template-columns: 1fr 440px; overflow: hidden; }
+    .sheet-preview-pane { display: flex; flex-direction: column; padding: 16px; overflow-y: auto; align-items: center; background: var(--bg-primary); border-right: 1px solid var(--border-color); }
+    .sheet-interactive-container { position: relative; display: inline-block; max-width: 95%; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border-color); }
+    #sheet-img { display: block; width: 100%; height: auto; min-height: 240px; background: var(--bg-secondary); }
+    .sheet-grid-overlay { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(4, 1fr); pointer-events: auto; }
+    .sheet-cell { border: 1px solid rgba(255, 255, 255, 0.12); cursor: pointer; position: relative; transition: all 0.12s ease; display: flex; align-items: flex-start; justify-content: flex-end; padding: 5px; }
+    .sheet-cell:hover { background: color-mix(in srgb, var(--accent-teal) 15%, transparent); border-color: var(--accent-teal); }
+    .cell-badge { background: color-mix(in srgb, var(--bg-primary) 85%, transparent); color: var(--text-primary); border: 1px solid var(--border-color); padding: 1px 5px; border-radius: 3px; font-size: 9.5px; font-family: ui-monospace, monospace; }
+    .plan-table-pane { padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: var(--bg-secondary); }
+    .chapter-card { background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 10px; display: flex; flex-direction: column; gap: 5px; }
+    .chapter-card-top { display: flex; align-items: center; justify-content: space-between; }
+    .chapter-card-title { font-size: 12px; font-weight: 600; color: var(--text-primary); }
+    .chapter-card-meta { font-size: 10.5px; color: var(--text-muted); }
+
+    /* VIEW 4: ASSET FOOTAGE & LOOP EXPLORER */
+    .assets-layout { flex: 1; display: grid; grid-template-columns: 320px 1fr; overflow: hidden; }
+    .assets-sidebar { border-right: 1px solid var(--border-color); background: var(--bg-secondary); overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+    .asset-item { background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 8px 10px; cursor: pointer; display: flex; flex-direction: column; gap: 3px; transition: all 0.12s ease; }
+    .asset-item:hover { border-color: var(--border-focus); background: var(--bg-hover); }
+    .asset-item.active { border-color: var(--accent-teal); background: color-mix(in srgb, var(--accent-teal) 10%, var(--bg-tertiary)); }
+    .asset-name { font-size: 11.5px; font-weight: 600; color: var(--text-primary); }
+    .asset-meta { font-size: 9.5px; color: var(--text-muted); }
+    .asset-inspector { display: flex; flex-direction: column; background: var(--bg-primary); overflow: hidden; padding: 16px; gap: 12px; }
+    .inspector-player-wrapper { flex: 1; position: relative; display: flex; align-items: center; justify-content: center; background: #000; border-radius: var(--radius); border: 1px solid var(--border-color); overflow: hidden; }
+    #asset-video { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .loop-controls-panel { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+    .loop-sliders-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .slider-group { display: flex; flex-direction: column; gap: 4px; }
+    .slider-group label { font-size: 10.5px; color: var(--text-secondary); display: flex; justify-content: space-between; }
+    .slider-group input[type="range"] { accent-color: var(--accent-teal); cursor: pointer; }
+    .asset-sidebar-header { display: flex; flex-direction: column; gap: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--border-color); }
+    .sidebar-tab-toggle { display: grid; grid-template-columns: 1fr 1fr; background: var(--bg-tertiary); border-radius: var(--radius); padding: 2px; gap: 2px; }
+    .sidebar-tab-toggle button { background: transparent; border: none; color: var(--text-muted); font-size: 11px; font-weight: 600; padding: 5px 0; border-radius: calc(var(--radius) - 2px); cursor: pointer; }
+    .sidebar-tab-toggle button.active { background: var(--bg-primary); color: var(--text-primary); }
+    .filter-pills-row { display: flex; gap: 4px; overflow-x: auto; padding-bottom: 2px; }
+    .pill-btn { background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 9999px; font-size: 9.5px; color: var(--text-secondary); padding: 2px 7px; cursor: pointer; white-space: nowrap; }
+    .pill-btn.active { background: color-mix(in srgb, var(--accent-teal) 15%, var(--bg-tertiary)); border-color: var(--accent-teal); color: var(--accent-teal); }
+    .assets-scroll-list, .clips-scroll-list { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+    .inspector-viewport-container { flex: 1; min-height: 220px; position: relative; display: flex; }
+    .ab-compare-container { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; background: #000; border: 1px solid var(--border-color); border-radius: var(--radius); padding: 10px; }
+    .ab-pane { display: flex; flex-direction: column; gap: 6px; }
+    .ab-pane-header { display: flex; justify-content: space-between; align-items: center; font-size: 10.5px; }
+    .ab-label { font-weight: 700; color: var(--accent-teal); letter-spacing: 0.05em; }
+    .ab-time { font-family: monospace; color: var(--text-secondary); }
+    .ab-viewport { flex: 1; display: flex; align-items: center; justify-content: center; background: #050608; border: 1px solid var(--border-color); border-radius: 4px; overflow: hidden; min-height: 160px; }
+    .ab-viewport canvas { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .badge-seamless { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 9999px; background: color-mix(in srgb, var(--accent-teal) 15%, transparent); color: var(--accent-teal); border: 1px solid color-mix(in srgb, var(--accent-teal) 30%, transparent); }
+    .loop-panel-top { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; }
+    .loop-actions-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .saved-clips-section { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; max-height: 180px; overflow-y: auto; }
+    .saved-clips-header { display: flex; justify-content: space-between; align-items: center; }
+    .saved-clips-title { font-size: 11px; font-weight: 700; color: var(--accent-gold); letter-spacing: 0.05em; }
+    .source-clips-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+    .clip-card { background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; cursor: pointer; }
+    .clip-card:hover { border-color: var(--border-focus); background: var(--bg-hover); }
+    .clip-card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; }
+    .clip-card-name { font-size: 11.5px; font-weight: 600; color: var(--text-primary); }
+    .clip-card-meta { font-size: 10px; color: var(--text-muted); display: flex; gap: 6px; }
+    .clip-card-tags { display: flex; flex-wrap: wrap; gap: 3px; }
+    .clip-tag-pill { font-size: 9px; padding: 1px 5px; border-radius: 3px; background: var(--bg-primary); color: var(--text-secondary); border: 1px solid var(--border-color); }
+
+    /* MODALS */
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); z-index: 1000; display: none; align-items: center; justify-content: center; }
+    .modal-backdrop.open { display: flex; }
+    .modal-window { background: var(--bg-secondary); border: 1px solid var(--border-focus); border-radius: 8px; width: 540px; max-width: 95vw; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45); }
+    .modal-header { padding: 10px 14px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; background: var(--bg-secondary); }
+    .modal-body { padding: 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: var(--bg-secondary); }
+    .form-group { display: flex; flex-direction: column; gap: 4px; }
+    .form-group label { font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .form-control { background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-primary); padding: 6px 8px; font-family: inherit; font-size: 12px; }
+    .form-control:focus { outline: none; border-color: var(--border-focus); }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .dropzone { border: 1px dashed var(--border-focus); border-radius: 4px; padding: 12px; text-align: center; font-size: 11px; color: var(--text-secondary); cursor: pointer; background: var(--bg-tertiary); }
+    .dropzone:hover { border-color: var(--accent-teal); color: var(--text-primary); background: var(--bg-hover); }
+    .preview-thumb { max-height: 120px; border-radius: 4px; border: 1px solid var(--border-color); display: none; object-fit: cover; margin-top: 6px; }
+    .modal-footer { padding: 10px 14px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 8px; background: var(--bg-secondary); }
+  </style>
+</head>
+<body>
+
+  <!-- TOP HEADER -->
+  <header>
+    <div class="brand">
+      <div class="brand-badge" title="Slopscore 2.0 Director Studio">
+        <svg class="icon icon-lg" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25Z" /></svg>
+      </div>
+      <span id="hdr-project-title" class="project-title-pill" title="Active Slopscore Project">SLOPSCORE 2.0</span>
+
+      <!-- VERSION CLUSTER -->
+      <div class="version-cluster">
+        <span class="ver-label">VER</span>
+        <select id="hdr-version-select" class="ver-select" title="Active Project Version"></select>
+        <button id="btn-open-snapshot-modal" class="btn btn-icon-only btn-gold" title="Freeze Current Version & Create Snapshot">
+          <svg class="icon-sm" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"/><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z"/></svg>
+        </button>
+      </div>
+
+      <!-- RENDER ENGINE SWITCHER & LIVE CANVAS PREVIEW TOGGLE -->
+      <div class="version-cluster" title="Pluggable Render Engine">
+        <span class="ver-label">ENG</span>
+        <select id="hdr-renderer-select" class="ver-select">
+          <option value="native">native (C/Metal)</option>
+          <option value="threejs">threejs (3D)</option>
+          <option value="webgpu">webgpu (Compute)</option>
+          <option value="pixijs">pixijs (2D CRT)</option>
+          <option value="p5js">p5js (Sketch)</option>
+          <option value="hyperframes">hyperframes (DOM)</option>
+          <option value="fframes">fframes (Rust SVG)</option>
+        </select>
+        <button id="btn-live-preview-toggle" class="btn btn-sm btn-teal" title="Toggle between Master Video and Real-time Browser Renderer Preview">
+          Live Preview
+        </button>
+      </div>
+    </div>
+
+    <div class="nav-tabs">
+      <button class="tab-btn active" data-tab="tab-master" title="Master Cut & Live Preview">
+        <svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25Z" /></svg>
+      </button>
+      <button class="tab-btn" data-tab="tab-audio" title="Music & Stems Mixer">
+        <svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 9l10.5-3m0 6.553v3.75a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 11-.99-3.467l2.31-.66a.75.75 0 00.57-.723V6.368M9 9v10.5a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 11-.99-3.467l2.31-.66A.75.75 0 009 17.153V9zm0 0l10.5-3" /></svg>
+      </button>
+      <button class="tab-btn" data-tab="tab-sheet" title="Contact Sheet & Chapter Plan">
+        <svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" /></svg>
+      </button>
+      <button class="tab-btn" data-tab="tab-assets" title="Asset Footage & A/B Loop Explorer">
+        <svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" /></svg>
+      </button>
+      <button class="tab-btn" data-tab="tab-notes" title="All Director Annotations">
+        <svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.269z" /></svg>
+        <span id="notes-badge" class="tab-badge">0</span>
+      </button>
+    </div>
+
+    <div class="header-actions">
+      <!-- RUN COMMAND TOOL-DOCK -->
+      <div class="run-dock">
+        <button id="btn-run-sheet" class="btn btn-icon-only" title="Render Contact Sheet (slopscore sheet)">
+          <svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z" /></svg>
+        </button>
+        <button id="btn-run-recompile" class="btn btn-icon-only" title="Recompile Native Renderer (slopscore build)">
+          <svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5" /></svg>
+        </button>
+        <button id="btn-run-audio" class="btn btn-icon-only" title="Synthesize Audio Score & Stems (slopscore audio --stems)">
+          <svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 9l10.5-3m0 6.553v3.75a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 11-.99-3.467l2.31-.66a.75.75 0 00.57-.723V6.368M9 9v10.5a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 11-.99-3.467l2.31-.66A.75.75 0 009 17.153V9zm0 0l10.5-3" /></svg>
+        </button>
+        <button id="btn-run-preview" class="btn btn-icon-only" title="Render 15s Fast Preview Clip">
+          <svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.942A4.5 4.5 0 0115.918 17H8.082a4.5 4.5 0 01-2.312-.758L5 15.3m14.8 0A4.5 4.5 0 0121 19.2V20.25a.75.75 0 01-.75.75H3.75a.75.75 0 01-.75-.75V19.2a4.5 4.5 0 011.2-3.9" /></svg>
+        </button>
+        <button id="btn-run-master" class="btn btn-icon-only btn-coral" title="Render Full Master Video (slopscore render)">
+          <svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" /></svg>
+        </button>
+        <button id="btn-toggle-terminal" class="btn btn-icon-only" title="Toggle Live Build Console">
+          <svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z" /></svg>
+          <span id="term-status-dot" class="status-dot"></span>
+        </button>
+      </div>
+
+      <button id="btn-quick-note" class="btn btn-icon-only btn-gold" title="Add Director Note">
+        <svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+      </button>
+      <button id="btn-sync-disk" class="btn btn-icon-only" title="Sync Annotations to Disk">
+        <svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>
+      </button>
+      <button id="btn-toggle-assistant" class="btn btn-sm btn-teal" title="Toggle Genereti Studio Assistant Drawer">
+        <svg class="icon icon-sm" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" /></svg>
+        <span>Assistant</span>
+      </button>
+      <button id="theme-btn" class="btn btn-icon-only" title="Toggle Dark / Light Theme">
+        <svg class="icon theme-icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" /></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <div id="main-content">
+
+    <!-- VIEW 1: MASTER CUT REVIEW & LIVE CANVAS PREVIEW -->
+    <div id="tab-master" class="view-panel active">
+      <div class="master-layout">
+        <div class="player-section">
+          <div class="video-viewport">
+            <video id="master-video" src="/out/video.mp4" preload="auto"></video>
+            <div id="live-renderer-container"></div>
+            <div class="video-overlay-info">
+              <div id="cur-chapter-badge" class="overlay-pill">CH 0: Main</div>
+              <div id="cur-engine-badge" class="overlay-pill" style="color:var(--accent-gold);">VIDEO CUT</div>
+              <div id="cur-loop-badge" class="overlay-pill" style="display:none; color:var(--accent-coral);">LOOP ACTIVE</div>
+            </div>
+          </div>
+
+          <audio id="master-audio-preview" src="/out/score.wav" preload="auto"></audio>
+
+          <div class="transport-bar">
+            <div id="timeline" class="timeline-container">
+              <div id="timeline-chapters" class="timeline-chapters"></div>
+              <div class="timeline-audio-lane">
+                <canvas id="timeline-waveform-canvas"></canvas>
+                <canvas id="timeline-musical-grid"></canvas>
+              </div>
+              <div id="timeline-in-out" class="timeline-in-out"></div>
+              <div id="timeline-pins" class="timeline-pins"></div>
+              <div class="timeline-scrubber">
+                <div id="playhead" class="playhead-line" style="left: 0%;"></div>
+              </div>
+              <div id="timeline-hover-guide" class="timeline-hover-guide"></div>
+              <div id="timeline-hover-tip" class="timeline-hover-tip">Bar 1.1 • 00:00.00</div>
+            </div>
+
+            <!-- CONTROLS ROW -->
+            <div class="controls-row">
+              <div class="controls-group">
+                <button id="btn-play" class="btn btn-icon-only" title="Play / Pause (Space)">
+                  <svg class="icon play-icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z"/></svg>
+                </button>
+                <button id="btn-step-back" class="btn btn-icon-only" title="Step -1 frame (J / <)">
+                  <svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" /></svg>
+                </button>
+                <button id="btn-step-fwd" class="btn btn-icon-only" title="Step +1 frame (L / >)">
+                  <svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
+                </button>
+              </div>
+
+              <div id="time-readout-wrap" class="time-readout-wrap" title="Click to Toggle Primary: Musical Measure (Bar.Beat) vs Clock Time (M:S)">
+                <div id="time-primary-readout" class="time-primary">BAR 1.1.1</div>
+                <div id="time-secondary-readout" class="time-secondary">00:00.00 / 01:00.00</div>
+              </div>
+
+              <div class="controls-divider"></div>
+
+              <div class="controls-group">
+                <div class="bpm-cluster" title="Song Tempo (BPM)">
+                  <input type="number" id="inp-tempo-bpm" value="164" min="40" max="240" step="1">
+                  <span class="bpm-label">BPM</span>
+                </div>
+
+                <select id="sel-musical-snap" class="form-control" style="padding: 2px 6px; font-size:11px;" title="Musical Snapping Quantization">
+                  <option value="bar" selected>Snap: Bar</option>
+                  <option value="half">Snap: 1/2 Bar</option>
+                  <option value="beat">Snap: Beat</option>
+                  <option value="sixteenth">Snap: 1/16 Beat</option>
+                  <option value="free">Snap: Free (Off)</option>
+                </select>
+
+                <button id="btn-snap-playhead" class="btn btn-icon-only" title="Snap Playhead to Nearest Musical Division (S)">
+                  <svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" /></svg>
+                </button>
+              </div>
+
+              <div class="controls-divider"></div>
+
+              <div class="controls-group">
+                <button id="btn-master-audio-mute" class="btn btn-icon-only" title="Mute / Unmute Audio Preview (M)">
+                  <svg id="icon-audio-vol" class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.757 3.63 8.25 4.51 8.25H6.75z" /></svg>
+                  <svg id="icon-audio-muted" class="icon" style="display:none; color:var(--accent-coral);" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17.25 9.75L19.5 12m0 0l2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-7.5l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.757 3.63 8.25 4.51 8.25H6.75z" /></svg>
+                </button>
+                <input type="range" id="rng-master-audio-vol" class="audio-vol-slider" min="0" max="1" step="0.05" value="0.85" title="Master Audio Preview Volume">
+                <select id="sel-master-audio-stem" class="form-control" style="padding: 2px 6px; font-size:11px; max-width:130px;" title="Audio Preview Source / Stem"></select>
+              </div>
+
+              <div style="flex:1;"></div>
+
+              <div class="controls-group">
+                <button id="btn-mark-in" class="btn btn-icon-only" title="Set IN point ([)">
+                  <svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 4.5H6.75A2.25 2.25 0 004.5 6.75v10.5a2.25 2.25 0 002.25 2.25H9" /></svg>
+                </button>
+                <button id="btn-mark-out" class="btn btn-icon-only" title="Set OUT point (])">
+                  <svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 4.5h2.25A2.25 2.25 0 0119.5 6.75v10.5a2.25 2.25 0 01-2.25 2.25H15" /></svg>
+                </button>
+                <button id="btn-clear-range" class="btn btn-icon-only" style="display:none;" title="Clear Range">
+                  <svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+                <button id="btn-capture-frame" class="btn btn-icon-only btn-gold" title="Capture Frame Snapshot Reference">
+                  <svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"/><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z"/></svg>
+                </button>
+
+                <select id="sel-speed" class="form-control" style="padding: 2px 6px; font-size:11px;" title="Playback Speed">
+                  <option value="0.25">0.25x</option>
+                  <option value="0.5">0.5x</option>
+                  <option value="1.0" selected>1.0x</option>
+                  <option value="1.5">1.5x</option>
+                  <option value="2.0">2.0x</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT DRAWER: LIVE OVERRIDES & ACTIVE NOTES -->
+        <div class="note-drawer">
+          <div class="overrides-box">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span class="drawer-title" style="color:var(--accent-teal);">Live Shader & Camera Overrides</span>
+              <button id="btn-reset-overrides" class="btn btn-sm" style="padding:1px 6px; font-size:9.5px;">Reset</button>
+            </div>
+            <div class="override-row">
+              <span style="width:92px;">Chroma Split</span>
+              <input type="range" id="ovr-chroma" min="0" max="1" step="0.02" value="0.2">
+              <span id="val-ovr-chroma" style="width:32px; text-align:right; font-family:monospace;">0.20</span>
+            </div>
+            <div class="override-row">
+              <span style="width:92px;">Relief Depth</span>
+              <input type="range" id="ovr-relief" min="0" max="6" step="0.1" value="2.8">
+              <span id="val-ovr-relief" style="width:32px; text-align:right; font-family:monospace;">2.8</span>
+            </div>
+            <div class="override-row">
+              <span style="width:92px;">Phosphor Glow</span>
+              <input type="range" id="ovr-glow" min="0" max="2" step="0.05" value="1.0">
+              <span id="val-ovr-glow" style="width:32px; text-align:right; font-family:monospace;">1.00</span>
+            </div>
+            <div class="override-row">
+              <span style="width:92px;">Camera Dist</span>
+              <input type="range" id="ovr-cam-dist" min="5" max="26" step="0.2" value="14">
+              <span id="val-ovr-cam-dist" style="width:32px; text-align:right; font-family:monospace;">14.0</span>
+            </div>
+          </div>
+          <div class="drawer-header">
+            <div class="drawer-title">Notes & Feedback</div>
+            <button id="btn-drawer-add" class="btn btn-icon-only btn-gold" title="Add Note">
+              <svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+            </button>
+          </div>
+          <div id="drawer-notes-list" class="notes-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW 2: MUSIC & AUDIO EDITOR -->
+    <div id="tab-audio" class="view-panel">
+      <div class="audio-editor-layout">
+        <div class="stems-mixer-pane">
+          <div class="stems-mixer-header">
+            <div>
+              <span style="font-size:13px; font-weight:700; color:var(--accent-teal);">MUSIC TRACKS & STEM MIXER</span>
+              <div id="audio-meta-subtitle" style="font-size:10px; color:var(--text-dim);">Procedural Score</div>
+            </div>
+            <div style="display:flex; gap:6px;">
+              <button id="btn-unmute-all" class="btn btn-sm">Reset Solo/Mute</button>
+              <button id="btn-play-audio-all" class="btn btn-sm btn-gold">▶ Play Audio</button>
+            </div>
+          </div>
+          <div id="stems-container" class="stems-list"></div>
+        </div>
+
+        <div class="audio-inspector-pane">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <span id="cur-stem-title" style="font-size:15px; font-weight:700; color:var(--text-primary);">MASTER BUS WAVEFORM & SPECTRUM</span>
+              <p id="cur-stem-role" style="font-size:11px; color:var(--accent-teal);">Full Stereo Mix</p>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <button id="btn-audio-annotate" class="btn btn-sm btn-gold">+ Add Audio Note</button>
+            </div>
+          </div>
+
+          <div class="waveform-visualizer-box">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="font-size:11px; font-weight:700; color:var(--text-dim); text-transform:uppercase;">AMPLITUDE WAVEFORM</span>
+              <div style="display:flex; gap:6px; align-items:center;">
+                <span id="audio-scrub-time" style="font-family:monospace; font-size:12px; color:var(--accent-gold);">00:00.00</span>
+                <span style="font-size:11px; color:var(--text-muted); margin-left:8px;">Zoom:</span>
+                <button class="btn btn-sm" onclick="window.setWaveformZoom(1)">1x</button>
+                <button class="btn btn-sm" onclick="window.setWaveformZoom(2)">2x</button>
+                <button class="btn btn-sm" onclick="window.setWaveformZoom(4)">4x</button>
+              </div>
+            </div>
+
+            <div class="canvas-container" id="waveform-click-area">
+              <canvas id="audio-waveform-canvas"></canvas>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
+              <span style="font-size:11px; font-weight:700; color:var(--text-dim); text-transform:uppercase;">ENERGY & GLITCH SPECTRUM</span>
+              <div style="display:flex; gap:10px; font-size:10px;">
+                <span style="color:#38bdf8;">■ Bass</span>
+                <span style="color:#a855f7;">■ Mid</span>
+                <span style="color:#fbbf24;">■ High</span>
+                <span style="color:#f43f5e;">■ Transient</span>
+                <span style="color:#10b981;">■ Glitch</span>
+              </div>
+            </div>
+            <div class="canvas-container" style="height:60px;">
+              <canvas id="audio-features-canvas"></canvas>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; padding-top:8px; border-top:1px solid var(--border-color);">
+              <div style="display:flex; gap:6px; align-items:center;">
+                <button id="btn-audio-loop-test" class="btn btn-sm" title="Loop Audition [IN - OUT]">Loop Audition</button>
+              </div>
+              <span id="audio-range-readout" style="font-size:11px; font-family:monospace; color:var(--accent-teal);">Range: None</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW 3: CONTACT SHEET & STORYBOARD PLAN -->
+    <div id="tab-sheet" class="view-panel">
+      <div class="sheet-layout">
+        <div class="sheet-preview-pane">
+          <div style="margin-bottom: 12px; display:flex; justify-content:space-between; width:95%;">
+            <span style="font-size:13px; font-weight:700; color:var(--accent-teal);">12-FRAME CURATED CONTACT SHEET</span>
+            <span style="font-size:11px; color:var(--text-dim);">Click any cell to jump transport to that keyframe</span>
+          </div>
+
+          <div class="sheet-interactive-container">
+            <img id="sheet-img" src="/out/sheet.jpg?t=1" alt="Contact Sheet">
+            <div id="sheet-grid" class="sheet-grid-overlay"></div>
+          </div>
+        </div>
+
+        <div class="plan-table-pane">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="font-size:13px; font-weight:700; color:var(--accent-gold);">NARRATIVE CHAPTER PLAN</div>
+            <span id="sheet-chapters-summary" style="font-size:11px; color:var(--text-dim);"></span>
+          </div>
+          <div id="chapters-list" style="display:flex; flex-direction:column; gap:8px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW 4: ASSET & CLIP LIBRARY WITH A/B LOOP FINDER -->
+    <div id="tab-assets" class="view-panel">
+      <div class="assets-layout">
+        <div class="assets-sidebar">
+          <div class="asset-sidebar-header">
+            <div class="sidebar-tab-toggle">
+              <button id="tab-btn-sources" class="active" title="Browse raw media sources">Sources</button>
+              <button id="tab-btn-clips" title="Browse saved clip library">Clip Library</button>
+            </div>
+            <div id="source-filter-pills" class="filter-pills-row">
+              <button class="pill-btn active" data-filter="all">All</button>
+              <button class="pill-btn" data-filter="archival">Archival</button>
+              <button class="pill-btn" data-filter="render">Renders</button>
+              <button class="pill-btn" data-filter="graphic">Graphics</button>
+            </div>
+          </div>
+
+          <div id="assets-list" class="assets-scroll-list"></div>
+          <div id="clips-sidebar-list" class="clips-scroll-list" style="display:none;"></div>
+        </div>
+
+        <div class="asset-inspector">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <div>
+              <div id="inspector-title" style="font-size:14px; font-weight:700; color:var(--text-primary);">SELECT A SOURCE</div>
+              <div id="inspector-subtitle" style="font-size:11px; color:var(--text-secondary);">Extract, find seamless loop seams, and catalog usable clip assets</div>
+            </div>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <button id="btn-view-mode-toggle" class="btn btn-sm" title="Toggle between Single Video View and A/B Seam Split View">
+                <span id="txt-view-mode">A/B Seam Compare</span>
+              </button>
+              <button id="btn-asset-annotate" class="btn btn-sm btn-gold" title="Create a reusable clip asset">+ Save Clip Asset</button>
+            </div>
+          </div>
+
+          <div class="inspector-viewport-container">
+            <div id="single-player-wrapper" class="inspector-player-wrapper">
+              <video id="asset-video" loop playsinline controls></video>
+            </div>
+
+            <div id="ab-compare-wrapper" class="ab-compare-container" style="display:none;">
+              <div class="ab-pane">
+                <div class="ab-pane-header">
+                  <span class="ab-label">FRAME A (LOOP IN)</span>
+                  <span id="ab-time-in" class="ab-time">0.00s • Bar 1.1</span>
+                </div>
+                <div class="ab-viewport">
+                  <canvas id="ab-canvas-in"></canvas>
+                </div>
+              </div>
+              <div class="ab-pane">
+                <div class="ab-pane-header">
+                  <span class="ab-label">FRAME B (LOOP OUT)</span>
+                  <span id="ab-time-out" class="ab-time">4.00s • Bar 3.3</span>
+                </div>
+                <div class="ab-viewport">
+                  <canvas id="ab-canvas-out"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="loop-controls-panel">
+            <div class="loop-panel-top">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:11px; font-weight:700; color:var(--accent-gold); letter-spacing:0.05em;">SEAMLESS LOOP FINDER</span>
+                <span id="loop-diff-badge" class="badge-seamless" title="Visual difference between Start Frame and End Frame">Match: Ready</span>
+              </div>
+              <div id="loop-time-readout" style="font-size:11.5px; font-family:monospace; color:var(--accent-teal);">IN: 0.00s | OUT: 4.00s | DUR: 4.00s</div>
+            </div>
+
+            <div class="loop-sliders-row">
+              <div class="slider-group">
+                <label><span>LOOP START (IN)</span><span id="lbl-asset-in">0.00s</span></label>
+                <input type="range" id="rng-asset-in" min="0" max="10" step="0.02" value="0">
+              </div>
+              <div class="slider-group">
+                <label><span>LOOP END (OUT)</span><span id="lbl-asset-out">4.00s</span></label>
+                <input type="range" id="rng-asset-out" min="0" max="10" step="0.02" value="4">
+              </div>
+            </div>
+
+            <div class="loop-actions-row">
+              <button id="btn-asset-test-loop" class="btn btn-icon-only" title="Test Loop Audition">
+                <svg class="icon play-icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z"/></svg>
+              </button>
+              <button id="btn-ab-flip" class="btn btn-icon-only" title="Rapid A/B Flip Toggle (Inspect Seam)">
+                <svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" /></svg>
+              </button>
+
+              <button id="btn-automatch-loop" class="btn btn-gold" title="Automatically scan candidate frames for the closest matching loop point">
+                <svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" /></svg>
+                <span>Automatch Loop</span>
+              </button>
+
+              <select id="sel-asset-loop-mode" class="form-control" style="max-width:130px; font-size:11px;" title="Loop Playback Mode">
+                <option value="loop" selected>Mode: Loop</option>
+                <option value="pingpong">Mode: Ping-Pong</option>
+                <option value="reverse">Mode: Reverse</option>
+                <option value="once">Mode: Once</option>
+              </select>
+
+              <select id="sel-asset-speed" class="form-control" style="max-width:90px; font-size:11px;" title="Playback Speed">
+                <option value="0.25">0.25x</option>
+                <option value="0.5">0.5x</option>
+                <option value="1.0" selected>1.0x</option>
+                <option value="1.5">1.5x</option>
+                <option value="2.0">2.0x</option>
+              </select>
+
+              <div style="flex:1;"></div>
+
+              <button id="btn-quantize-loop" class="btn btn-sm" title="Quantize Loop to Nearest Musical Measure">
+                Quantize to Bar
+              </button>
+            </div>
+          </div>
+
+          <div class="saved-clips-section">
+            <div class="saved-clips-header">
+              <span id="saved-clips-title" class="saved-clips-title">SAVED CLIPS FOR THIS SOURCE</span>
+              <button id="btn-add-clip-direct" class="btn btn-sm btn-gold">+ Add to Clip Library</button>
+            </div>
+            <div id="source-clips-container" class="source-clips-container"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW 5: ALL NOTES -->
+    <div id="tab-notes" class="view-panel">
+      <div style="flex:1; display:flex; flex-direction:column; padding:16px; max-width:980px; margin:0 auto; width:100%; overflow:hidden;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+          <div>
+            <h2 style="font-size:14px; font-weight:600; color:var(--text-primary);">Director Annotations & Feedback</h2>
+            <p style="font-size:11px; color:var(--text-secondary);">Tracked across versions with live status, filters, and automated disk backups</p>
+          </div>
+          <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+            <button id="btn-archive-resolved" class="btn btn-icon-only btn-gold" title="Archive Resolved Notes">
+              <svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" /></svg>
+            </button>
+            <button id="btn-open-clear-modal" class="btn btn-icon-only btn-coral" title="Clear Notes (with auto-backup)">
+              <svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
+            </button>
+            <button id="btn-export-json" class="btn btn-icon-only" title="Export Notes JSON">
+              <svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
+            </button>
+            <button id="btn-copy-md" class="btn btn-icon-only" title="Copy Markdown Summary">
+              <svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" /></svg>
+            </button>
+            <button id="btn-new-note-full" class="btn btn-icon-only btn-gold" title="Create New Note">
+              <svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="notes-filter-bar">
+          <div id="notes-ver-pills" style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;"></div>
+          <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+            <select id="sel-notes-status-filter" class="form-control" style="padding:3px 6px; font-size:11px;">
+              <option value="all">Status: All</option>
+              <option value="active">Active (Unresolved)</option>
+              <option value="resolved">Resolved</option>
+              <option value="archived">Archived</option>
+            </select>
+            <label style="display:flex; align-items:center; gap:5px; font-size:11px; color:var(--text-secondary); cursor:pointer;">
+              <input type="checkbox" id="chk-show-archived" checked>
+              <span>Show Archived</span>
+            </label>
+            <input type="text" id="inp-notes-search" class="form-control" placeholder="Search notes..." style="padding:3px 6px; font-size:11px; width:140px;">
+          </div>
+        </div>
+
+        <div id="all-notes-container" style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px; padding-right:6px;"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- SLIDE-OVER GENERETI ASSISTANT DRAWER -->
+  <aside id="assistant-drawer" class="assistant-drawer" aria-label="Genereti Assistant Drawer">
+    <div id="assistant-drawer-host" style="flex:1; height:100%; overflow:hidden;"></div>
+  </aside>
+
+  <!-- NOTE MODAL -->
+  <div id="note-modal" class="modal-backdrop">
+    <div class="modal-window">
+      <div class="modal-header">
+        <h3 id="modal-title" style="font-size:13px; font-weight:600; color:var(--text-primary);">Add Director Feedback Note</h3>
+        <button id="btn-modal-close" class="btn btn-icon-only" style="border:none;" title="Close">
+          <svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div id="note-modal-cues" class="musical-cues-bar">
+          <span class="cues-label">Musical Cues:</span>
+        </div>
+
+        <div class="form-group">
+          <label>Title / Summary</label>
+          <input type="text" id="inp-note-title" class="form-control" placeholder="e.g. Tighten spark sync, or boost phosphor glow">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Musical Start (Bar.Beat)</label>
+            <input type="text" id="inp-note-barstart" class="form-control" placeholder="e.g. 41.1" value="1.1">
+          </div>
+          <div class="form-group">
+            <label>Time Start (Seconds)</label>
+            <input type="number" id="inp-note-tstart" class="form-control" step="0.01" value="0">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Musical End (Optional)</label>
+            <input type="text" id="inp-note-barend" class="form-control" placeholder="e.g. 45.1">
+          </div>
+          <div class="form-group">
+            <label>Time End (Seconds - Optional)</label>
+            <input type="number" id="inp-note-tend" class="form-control" step="0.01" value="0">
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:6px; margin-top:-6px; margin-bottom:10px;">
+          <button type="button" id="btn-modal-quantize" class="btn btn-sm" title="Quantize time to nearest whole musical measure">
+            <span>Quantize to Measure</span>
+          </button>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Project Version</label>
+            <select id="inp-note-ver" class="form-control"></select>
+          </div>
+          <div class="form-group" style="justify-content:center;">
+            <label style="display:flex; align-items:center; gap:8px; margin-top:22px; font-size:11px; color:var(--text-secondary); cursor:pointer;">
+              <input type="checkbox" id="inp-note-archived">
+              <span>Mark as Archived</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Chapter / Target</label>
+            <input type="text" id="inp-note-chapter" class="form-control" value="Master Cut">
+          </div>
+          <div class="form-group">
+            <label>Status / Category</label>
+            <select id="inp-note-status" class="form-control">
+              <option value="fix">Fix / Adjustment</option>
+              <option value="idea">Creative Idea</option>
+              <option value="loop">Loop Seam</option>
+              <option value="audio">Audio / Stem</option>
+              <option value="resolved">Resolved</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Detailed Feedback / Prompt</label>
+          <textarea id="inp-note-text" class="form-control" rows="3" placeholder="Describe the visual, shader, camera, or musical adjustment..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Reference Link (Optional)</label>
+          <input type="text" id="inp-note-link" class="form-control" placeholder="https://...">
+        </div>
+
+        <div class="form-group">
+          <label>Screenshot / Reference Image (Click or Paste Cmd+V)</label>
+          <div id="dropzone" class="dropzone">Click to upload or paste image from clipboard</div>
+          <input type="file" id="file-input" accept="image/*" style="display:none;">
+          <img id="modal-thumb" class="preview-thumb" alt="Preview">
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button id="btn-modal-cancel" class="btn btn-sm">Cancel</button>
+        <button id="btn-modal-save" class="btn btn-sm btn-gold">Save Annotation</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- VERSION SNAPSHOT MODAL -->
+  <div id="snapshot-modal" class="modal-backdrop">
+    <div class="modal-window">
+      <div class="modal-header">
+        <h3 style="font-size:13px; font-weight:600; color:var(--accent-gold);">Freeze Version & Create Snapshot</h3>
+        <button id="btn-snap-modal-close" class="btn btn-icon-only" style="border:none;" title="Close">
+          <svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Snapshot Version ID</label>
+          <input type="text" id="inp-snap-id" class="form-control" value="v1.0">
+        </div>
+        <div class="form-group">
+          <label>Snapshot Name</label>
+          <input type="text" id="inp-snap-name" class="form-control" value="v1.0 Snapshot">
+        </div>
+        <div class="form-group">
+          <label>Snapshot Description / Changelog</label>
+          <textarea id="inp-snap-desc" class="form-control" rows="3">Milestone freeze</textarea>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:8px; margin-top:6px; padding:8px 10px; background:var(--bg-tertiary); border-radius:4px; border:1px solid var(--border-color);">
+          <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:11.5px; color:var(--text-primary);">
+            <input type="checkbox" id="chk-snap-archive-notes" checked>
+            <span>Archive all resolved notes under this snapshot</span>
+          </label>
+          <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:11.5px; color:var(--text-primary);">
+            <input type="checkbox" id="chk-snap-next-version" checked>
+            <span>Activate next version for subsequent feedback passes</span>
+          </label>
+        </div>
+        <div id="group-next-ver" class="form-group" style="margin-top:8px;">
+          <label>Next Active Version Tag</label>
+          <input type="text" id="inp-snap-next-id" class="form-control" value="v1.1">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-snap-cancel" class="btn btn-sm">Cancel</button>
+        <button id="btn-snap-submit" class="btn btn-sm btn-gold">Freeze & Snapshot Version</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CLEAR NOTES CONFIRMATION MODAL -->
+  <div id="clear-notes-modal" class="modal-backdrop">
+    <div class="modal-window" style="max-width:480px;">
+      <div class="modal-header">
+        <h3 style="font-size:13px; font-weight:600; color:var(--accent-coral);">Clear Notes (With Auto-Backup)</h3>
+        <button id="btn-clear-modal-close" class="btn btn-icon-only" style="border:none;" title="Close">
+          <svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:11.5px; color:var(--text-secondary); margin-bottom:10px; line-height:1.4;">
+          Select the scope of notes you wish to clear. A safety JSON backup will automatically be saved to <code style="color:var(--accent-gold);">feedback/backups/</code>.
+        </p>
+        <div class="form-group">
+          <label>Clear Filter Scope</label>
+          <select id="sel-clear-scope" class="form-control">
+            <option value="archived">Clear only Archived notes</option>
+            <option value="resolved">Clear only Resolved notes</option>
+            <option value="version">Clear notes for current selected version</option>
+            <option value="all">Clear ALL notes across all versions</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-clear-modal-cancel" class="btn btn-sm">Cancel</button>
+        <button id="btn-clear-modal-confirm" class="btn btn-sm btn-coral">Confirm Clear & Backup</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BUILD & RUN TERMINAL DRAWER -->
+  <div id="build-terminal-drawer" class="terminal-drawer">
+    <div class="terminal-header">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="font-weight:600; color:var(--text-primary); font-size:11px; letter-spacing:0.5px; text-transform:uppercase;">Build Terminal</span>
+        <span id="term-badge" class="badge-status idle">IDLE</span>
+        <span id="term-cmd-info" class="term-cmd">Ready</span>
+        <span id="term-timer" class="term-timer"></span>
+      </div>
+      <div style="display:flex; align-items:center; gap:6px;">
+        <button id="btn-term-kill" class="btn btn-icon-only btn-coral" style="display:none;" title="Kill Process">
+          <svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 7.5A2.25 2.25 0 017.5 5.25h9a2.25 2.25 0 012.25 2.25v9a2.25 2.25 0 01-2.25 2.25h-9a2.25 2.25 0 01-2.25-2.25v-9z" /></svg>
+        </button>
+        <button id="btn-term-clear" class="btn btn-icon-only" title="Clear Logs">
+          <svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
+        </button>
+        <button id="btn-term-close" class="btn btn-icon-only" style="border:none;" title="Close Terminal">
+          <svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
+      </div>
+    </div>
+    <div id="term-log-stream" class="terminal-body"></div>
+  </div>
+
+  <script type="module">
+    import { MeasureClock, formatClock } from '/slopscore/kit/measure-clock.js';
+    import { createTimeline } from '/slopscore/kit/frame-context.js';
+    import { grabVideoFrame, compareCanvases, updateLoopBadge, runLoopAutomatch } from '/studio/loop-finder.js';
+    import { createStudioApi } from '/studio/js/studio-api.js';
+    import { initWebMcpBridge } from '/studio/webmcp-bridge.js';
+    import { mountAssistant } from '/studio/assistant/panel.js';
+
+    const video = document.getElementById('master-video');
+    const liveContainer = document.getElementById('live-renderer-container');
+    const assetVideo = document.getElementById('asset-video');
+    const masterAudio = document.getElementById('master-audio-preview');
+
+    const state = {
+      projectData: null,
+      project: {
+        title: 'Slopscore 2.0',
+        audio: { bpm: 120, timeSignature: [4, 4], durationSeconds: 60, key: 'F minor', stems: [] },
+        renderer: 'native',
+        resolution: [1280, 720],
+        fps: 30,
+        chapters: [{ index: 0, id: 'ch-0', name: 'Main', startBar: 1, endBar: 30, start: 0, end: 60, color: '#64b5a0', particleRig: 'gears' }],
+        cues: [{ bar: 1, label: 'Start', time: 0 }],
+        sheet: { times: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 58] }
+      },
+      clock: new MeasureClock({ bpm: 120, timeSignature: [4, 4], duration: 60 }),
+      timeline: null,
+      overrides: { shaders: {}, camera: {}, chapters: {} },
+      renderer: 'native',
+      previewMode: 'video', // 'video' | 'live'
+      liveHost: null,
+      liveRaf: null,
+      currentTime: 0,
+      playing: false,
+      activeTab: 'master',
+
+      notes: [],
+      inPoint: null,
+      outPoint: null,
+      isLoopingRange: false,
+      pendingMediaDataUrl: null,
+
+      bpm: 120,
+      duration: 60,
+      timeDisplayMode: 'musical',
+      musicalSnap: 'bar',
+      masterAudioMuted: false,
+      masterAudioVolume: 0.85,
+      masterAudioStem: 'master',
+
+      stems: [],
+      stemAudios: {},
+      stemSolos: {},
+      stemMutes: {},
+      activeStemId: 'master',
+      audioFeatures: [],
+      waveformZoom: 1,
+
+      versions: [],
+      activeVersion: 'v1.0',
+      selectedVersionFilter: 'all',
+      notesStatusFilter: 'all',
+      showArchivedNotes: true,
+      searchQuery: '',
+
+      sources: [],
+      clips: [],
+      currentSource: null,
+      sourceFilter: 'all',
+      assetViewMode: 'single', // 'single' | 'ab'
+      abFlipInterval: null,
+      abFlipState: false,
+      loopMatchScore: 95.0,
+
+      currentRunTask: null,
+      isTerminalOpen: false,
+      runStartTime: null,
+      runTimerInterval: null
+    };
+
+    function rebuildClockAndTimeline() {
+      const p = state.project;
+      state.bpm = p.audio?.bpm || 120;
+      state.duration = p.audio?.durationSeconds || 60;
+      state.clock = new MeasureClock({
+        bpm: state.bpm,
+        timeSignature: p.audio?.timeSignature || [4, 4],
+        duration: state.duration
+      });
+      state.timeline = createTimeline(p, {
+        features: { frames: state.audioFeatures, fps: 15 },
+        clips: state.clips,
+        bank: state.projectData?.bank || null,
+        overrides: state.overrides
+      });
+    }
+
+    function secondsToMusical(secs, bpm = state.bpm) {
+      const c = new MeasureClock({ bpm, timeSignature: state.project.audio?.timeSignature || [4, 4], duration: state.duration });
+      const pos = c.positionAt(Math.max(0, secs || 0));
+      const bar = pos.barIndex + 1;
+      const beat = pos.beatInBar + 1;
+      const sixteenth = pos.sixteenth + 1;
+      return {
+        bar,
+        beat,
+        sixteenth,
+        label: `Bar ${bar}.${beat}.${sixteenth}`,
+        short: `${bar}.${beat}`,
+        musical: `${bar}.${beat}.${sixteenth}`
+      };
+    }
+
+    function formatTime(secs) {
+      return formatClock(secs);
+    }
+
+    function escapeHtml(str) {
+      return String(str || '').replace(/[&<>"']/g, m => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[m]));
+    }
+
+    function showNotification(msg) {
+      const el = document.createElement('div');
+      el.style.cssText = `position:fixed; bottom:24px; right:24px; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); font-weight:500; font-size:11.5px; padding:8px 14px; border-radius:4px; z-index:9999; box-shadow:0 4px 16px rgba(0,0,0,0.45); font-family:ui-monospace, SFMono-Regular, monospace;`;
+      el.textContent = msg;
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 2500);
+    }
+
+    // --- LOAD PROJECT FROM /api/project ---
+    async function loadProjectManifest() {
+      try {
+        const res = await fetch('/api/project');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        state.projectData = data;
+        if (data.project) {
+          state.project = data.project;
+          state.renderer = data.project.renderer || 'native';
+        }
+        if (data.overrides) state.overrides = data.overrides;
+        if (Array.isArray(data.clips)) state.clips = data.clips;
+
+        document.title = `Director Studio — ${state.project.title}`;
+        document.getElementById('hdr-project-title').textContent = state.project.title;
+        document.getElementById('inp-tempo-bpm').value = state.project.audio?.bpm || 120;
+        document.getElementById('hdr-renderer-select').value = state.renderer;
+        document.getElementById('audio-meta-subtitle').textContent =
+          `Procedural Score • ${state.project.audio?.bpm || 120} BPM • ${state.project.audio?.key || 'F minor'}`;
+
+        syncOverrideSliders();
+        rebuildClockAndTimeline();
+        renderCuesBar();
+      } catch (err) {
+        console.warn('Failed to load /api/project, using defaults:', err);
+        rebuildClockAndTimeline();
+      }
+    }
+
+    function renderCuesBar() {
+      const cuesBar = document.getElementById('note-modal-cues');
+      if (!cuesBar) return;
+      cuesBar.innerHTML = '<span class="cues-label">Musical Cues:</span>';
+      const cues = state.project.cues || [];
+      cues.forEach(cue => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'cue-pill';
+        btn.textContent = `Bar ${cue.bar} (${formatTime(cue.time)}) ${cue.label}`;
+        btn.addEventListener('click', () => {
+          document.getElementById('inp-note-tstart').value = (cue.time || 0).toFixed(2);
+          document.getElementById('inp-note-barstart').value = `${cue.bar}.1`;
+          document.getElementById('inp-note-chapter').value = cue.label;
+        });
+        cuesBar.appendChild(btn);
+      });
+    }
+
+    // --- LIVE BROWSER RENDERER PREVIEW (renderers/shared/host-runtime.js + fallback) ---
+    async function mountLivePreviewRenderer(rendererId = state.renderer) {
+      if (state.liveHost && state.liveHost.dispose) {
+        try { state.liveHost.dispose(); } catch { /* ignore */ }
+      }
+      state.liveHost = null;
+      liveContainer.innerHTML = '';
+
+      const engineId = rendererId === 'native' || rendererId === 'fframes' ? 'threejs' : rendererId;
+      try {
+        const mod = await import('/slopscore/renderers/shared/host-runtime.js');
+        if (mod && typeof mod.mountRenderer === 'function') {
+          state.liveHost = await mod.mountRenderer({
+            container: liveContainer,
+            rendererId: engineId,
+            projectData: { ...state.projectData, project: state.project, clips: state.clips, overrides: state.overrides },
+            width: state.project.resolution?.[0] || 1280,
+            height: state.project.resolution?.[1] || 720,
+            baseUrl: window.location.origin
+          });
+          await state.liveHost.renderAt(state.currentTime);
+          return;
+        }
+      } catch (err) {
+        console.warn('[Studio Live Preview] Falling back to built-in Canvas2D preview:', err.message);
+      }
+
+      // Built-in deterministic Canvas2D fallback preview so Live Preview always works
+      const canvas = document.createElement('canvas');
+      canvas.width = state.project.resolution?.[0] || 1280;
+      canvas.height = state.project.resolution?.[1] || 720;
+      liveContainer.appendChild(canvas);
+      const ctx2d = canvas.getContext('2d');
+
+      state.liveHost = {
+        canvas,
+        renderAt(t) {
+          rebuildClockAndTimeline();
+          const fCtx = state.timeline.contextAt(t);
+          const W = canvas.width, H = canvas.height;
+          ctx2d.fillStyle = '#07090e';
+          ctx2d.fillRect(0, 0, W, H);
+
+          const ch = state.project.chapters[fCtx.chapter] || state.project.chapters[0];
+          const color = ch?.color || '#64b5a0';
+          const cx = W * (fCtx.vp?.[0] ?? 0.5);
+          const cy = H * (fCtx.vp?.[1] ?? 0.5);
+          const glow = fCtx.shaders?.phosphorGlow ?? 1.0;
+          const count = 96;
+
+          ctx2d.save();
+          ctx2d.strokeStyle = color + '44';
+          ctx2d.fillStyle = color;
+          for (let i = 0; i < count; i++) {
+            const ang = (i / count) * Math.PI * 2 + t * 0.6;
+            const r = (90 + (i % 7) * 28 + (fCtx.audio?.bass || 0.2) * 80) * (14 / Math.max(4, fCtx.camera?.dist || 14));
+            const px = cx + Math.cos(ang) * r;
+            const py = cy + Math.sin(ang) * r * 0.65;
+            const sz = (2.5 + (i % 3)) * glow;
+            ctx2d.fillRect(px - sz / 2, py - sz / 2, sz, sz);
+            if (fCtx.shaders?.plexus && i > 0) {
+              const prevAng = ((i - 1) / count) * Math.PI * 2 + t * 0.6;
+              ctx2d.beginPath();
+              ctx2d.moveTo(px, py);
+              ctx2d.lineTo(cx + Math.cos(prevAng) * r, cy + Math.sin(prevAng) * r * 0.65);
+              ctx2d.stroke();
+            }
+          }
+          ctx2d.restore();
+
+          // HUD readout
+          ctx2d.fillStyle = 'rgba(255,255,255,0.75)';
+          ctx2d.font = '600 18px ui-monospace, SFMono-Regular, monospace';
+          ctx2d.fillText(`${state.project.title} • [${rendererId.toUpperCase()}] • Bar ${fCtx.bar.toFixed(2)}`, 28, H - 28);
+        },
+        setParam() {},
+        getParams() { return {}; },
+        dispose() { canvas.remove(); }
+      };
+      state.liveHost.renderAt(state.currentTime);
+    }
+
+    async function setPreviewMode(mode) {
+      state.previewMode = mode;
+      const btn = document.getElementById('btn-live-preview-toggle');
+      const badge = document.getElementById('cur-engine-badge');
+      if (mode === 'live') {
+        video.style.display = 'none';
+        liveContainer.style.display = 'flex';
+        btn.classList.add('active');
+        btn.textContent = 'Live Active';
+        badge.textContent = `LIVE: ${state.renderer.toUpperCase()}`;
+        await mountLivePreviewRenderer(state.renderer);
+      } else {
+        liveContainer.style.display = 'none';
+        video.style.display = 'block';
+        btn.classList.remove('active');
+        btn.textContent = 'Live Preview';
+        badge.textContent = `VIDEO (${state.renderer.toUpperCase()})`;
+      }
+    }
+
+    // --- OVERRIDES SLIDERS ---
+    function syncOverrideSliders() {
+      const s = state.overrides?.shaders || {};
+      const c = state.overrides?.camera || {};
+      const chroma = s.chromaticAberration ?? state.project.shaders?.chromaticAberration ?? 0.2;
+      const relief = s.reliefDepth ?? state.project.shaders?.reliefDepth ?? 2.8;
+      const glow = s.phosphorGlow ?? state.project.shaders?.phosphorGlow ?? 1.0;
+      const dist = c.dist ?? 14;
+
+      document.getElementById('ovr-chroma').value = chroma;
+      document.getElementById('val-ovr-chroma').textContent = Number(chroma).toFixed(2);
+      document.getElementById('ovr-relief').value = relief;
+      document.getElementById('val-ovr-relief').textContent = Number(relief).toFixed(1);
+      document.getElementById('ovr-glow').value = glow;
+      document.getElementById('val-ovr-glow').textContent = Number(glow).toFixed(2);
+      document.getElementById('ovr-cam-dist').value = dist;
+      document.getElementById('val-ovr-cam-dist').textContent = Number(dist).toFixed(1);
+    }
+
+    function setupOverridesPanel() {
+      document.getElementById('ovr-chroma').addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value);
+        document.getElementById('val-ovr-chroma').textContent = val.toFixed(2);
+        window.slopscore.studio.setShaderParam({ param: 'chromaticAberration', value: val });
+      });
+      document.getElementById('ovr-relief').addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value);
+        document.getElementById('val-ovr-relief').textContent = val.toFixed(1);
+        window.slopscore.studio.setShaderParam({ param: 'reliefDepth', value: val });
+      });
+      document.getElementById('ovr-glow').addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value);
+        document.getElementById('val-ovr-glow').textContent = val.toFixed(2);
+        window.slopscore.studio.setShaderParam({ param: 'phosphorGlow', value: val });
+      });
+      document.getElementById('ovr-cam-dist').addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value);
+        document.getElementById('val-ovr-cam-dist').textContent = val.toFixed(1);
+        window.slopscore.studio.setCameraParam({ param: 'dist', value: val });
+      });
+      document.getElementById('btn-reset-overrides').addEventListener('click', () => {
+        window.slopscore.studio.setOverrides({ shaders: {}, camera: {}, chapters: {} });
+      });
+    }
+
+    // --- THEME ---
+    function setupTheme() {
+      const saved = localStorage.getItem('slopscore_theme') || 'dark';
+      setTheme(saved);
+      document.getElementById('theme-btn')?.addEventListener('click', () => {
+        const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+        setTheme(isLight ? 'dark' : 'light');
+      });
+    }
+    function setTheme(theme) {
+      if (theme === 'light') document.documentElement.setAttribute('data-theme', 'light');
+      else document.documentElement.removeAttribute('data-theme');
+      localStorage.setItem('slopscore_theme', theme);
+    }
+
+    // --- TABS ---
+    function setupTabs() {
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const target = btn.dataset.tab;
+          activateTab(target);
+        });
+      });
+    }
+
+    function activateTab(tabDomId) {
+      const norm = tabDomId.startsWith('tab-') ? tabDomId : `tab-${tabDomId}`;
+      state.activeTab = norm.replace(/^tab-/, '');
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === norm));
+      document.querySelectorAll('.view-panel').forEach(p => p.classList.toggle('active', p.id === norm));
+      if (norm === 'tab-audio') {
+        drawAudioWaveform();
+        drawAudioFeatures();
+      }
+    }
+
+    // --- TIMELINE & TRANSPORT ---
+    function drawTimelineWaveform() {
+      const canvas = document.getElementById('timeline-waveform-canvas');
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      if (rect.width <= 0 || rect.height <= 0) return;
+
+      canvas.width = Math.floor(rect.width * dpr);
+      canvas.height = Math.floor(rect.height * dpr);
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width, H = canvas.height;
+      ctx.clearRect(0, 0, W, H);
+
+      const frames = state.audioFeatures;
+      const stem = state.stems.find(s => s.id === state.masterAudioStem) || { color: '#64b5a0' };
+      const color = stem.color || '#64b5a0';
+      const count = frames && frames.length ? frames.length : 120;
+      const barWidth = Math.max(1, W / count);
+      const midY = H / 2;
+
+      for (let i = 0; i < count; i++) {
+        const f = frames && frames.length ? frames[i] : [0.35 + 0.2 * Math.sin(i * 0.25), 0.4, 0.3, 0.2, (i % 4 === 0 ? 0.5 : 0.1), 0];
+        let amp = f[0] * 1.5;
+        if (state.masterAudioStem === 'bass') amp = f[1] * 1.8;
+        else if (state.masterAudioStem === 'drums') amp = (f[0] * 0.7 + f[4] * 1.5);
+        else if (state.masterAudioStem === 'glitch') amp = (f[5] * 2.2 + f[3] * 0.9);
+        amp = Math.min(1.0, Math.max(0.05, amp));
+        const barH = amp * (H * 0.88);
+        ctx.fillStyle = color + (f[4] > 0.4 ? 'dd' : '99');
+        ctx.fillRect(i * barWidth, midY - barH / 2, Math.max(1, barWidth - 0.5), barH);
+      }
+    }
+
+    function drawTimelineMusicalGrid() {
+      const canvas = document.getElementById('timeline-musical-grid');
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      if (rect.width <= 0 || rect.height <= 0) return;
+
+      canvas.width = Math.floor(rect.width * dpr);
+      canvas.height = Math.floor(rect.height * dpr);
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width, H = canvas.height;
+      ctx.clearRect(0, 0, W, H);
+
+      const totalDur = Math.max(1, state.duration);
+      const barDur = state.clock.barSec;
+      const totalBars = Math.floor(totalDur / barDur);
+
+      for (let b = 1; b <= totalBars + 1; b++) {
+        const t = (b - 1) * barDur;
+        if (t > totalDur) break;
+        const x = (t / totalDur) * W;
+        const isMajor8 = ((b - 1) % 8 === 0) || b === 1;
+        const isMajor4 = ((b - 1) % 4 === 0);
+
+        ctx.strokeStyle = isMajor8 ? 'rgba(255,255,255,0.28)' : (isMajor4 ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.08)');
+        ctx.lineWidth = (isMajor8 || isMajor4 ? 1 : 0.5) * dpr;
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, H);
+        ctx.stroke();
+
+        if (isMajor8) {
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+          ctx.font = `${8 * dpr}px ui-monospace, SFMono-Regular, monospace`;
+          ctx.fillText(`B${b}`, x + 3 * dpr, 9 * dpr);
+        }
+      }
+    }
+
+    function setupTimeline() {
+      const chaptersContainer = document.getElementById('timeline-chapters');
+      chaptersContainer.innerHTML = '';
+      const totalDur = Math.max(1, state.duration);
+
+      (state.project.chapters || []).forEach(ch => {
+        const widthPct = ((ch.end - ch.start) / totalDur) * 100;
+        const block = document.createElement('div');
+        block.className = 'chapter-block';
+        block.style.width = widthPct + '%';
+        block.style.backgroundColor = (ch.color || '#64b5a0') + '22';
+        block.style.color = ch.color || '#64b5a0';
+        block.textContent = `${ch.index}: ${ch.name} (B${ch.startBar})`;
+        block.title = `${ch.name} (${ch.start.toFixed(1)}s - ${ch.end.toFixed(1)}s, Bar ${ch.startBar}–${ch.endBar})`;
+        block.addEventListener('click', (e) => {
+          e.stopPropagation();
+          seekTransport(ch.start);
+        });
+        chaptersContainer.appendChild(block);
+      });
+
+      const timeline = document.getElementById('timeline');
+      const guide = document.getElementById('timeline-hover-guide');
+      const tip = document.getElementById('timeline-hover-tip');
+      let isDragging = false;
+
+      window.addEventListener('resize', () => {
+        drawTimelineWaveform();
+        drawTimelineMusicalGrid();
+      });
+
+      timeline.addEventListener('mouseenter', () => {
+        guide.style.display = 'block';
+        tip.style.display = 'block';
+      });
+      timeline.addEventListener('mouseleave', () => {
+        if (!isDragging) {
+          guide.style.display = 'none';
+          tip.style.display = 'none';
+        }
+      });
+
+      timeline.addEventListener('mousemove', (e) => {
+        const rect = timeline.getBoundingClientRect();
+        const frac = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        const rawTime = frac * state.duration;
+        guide.style.left = (frac * 100) + '%';
+        const m = secondsToMusical(rawTime, state.bpm);
+        tip.style.left = (frac * 100) + '%';
+        tip.textContent = `${m.label} • ${formatTime(rawTime)}`;
+        if (isDragging) {
+          const snapped = state.musicalSnap !== 'free' ? state.clock.snap(rawTime, state.musicalSnap) : rawTime;
+          seekTransport(snapped);
+        }
+      });
+
+      timeline.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        const rect = timeline.getBoundingClientRect();
+        const frac = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        const rawTime = frac * state.duration;
+        const snapped = state.musicalSnap !== 'free' ? state.clock.snap(rawTime, state.musicalSnap) : rawTime;
+        seekTransport(snapped);
+      });
+      window.addEventListener('mouseup', () => { isDragging = false; });
+    }
+
+    function seekTransport(targetSec) {
+      const t = Math.max(0, Math.min(state.duration, Number(targetSec) || 0));
+      state.currentTime = t;
+      try { video.currentTime = t; } catch { /* ignore */ }
+      if (masterAudio) {
+        try { masterAudio.currentTime = t; } catch { /* ignore */ }
+      }
+      syncStemsTime(t);
+      updateTransportReadout(t);
+      if (state.previewMode === 'live' && state.liveHost) {
+        state.liveHost.renderAt(t);
+      }
+    }
+
+    function updateTransportReadout(t = state.currentTime) {
+      state.currentTime = t;
+      const pct = (t / Math.max(1, state.duration)) * 100;
+      document.getElementById('playhead').style.left = pct + '%';
+
+      const m = secondsToMusical(t, state.bpm);
+      const clockStr = `${formatTime(t)} / ${formatTime(state.duration)}`;
+      const totalBars = Math.round(state.clock.totalBars);
+      const musicalStr = `${m.label} / Bar ${totalBars}`;
+
+      const timePrimary = document.getElementById('time-primary-readout');
+      const timeSecondary = document.getElementById('time-secondary-readout');
+      if (state.timeDisplayMode === 'musical') {
+        timePrimary.textContent = m.label.toUpperCase();
+        timeSecondary.textContent = `${clockStr} • ${state.bpm} BPM`;
+      } else {
+        timePrimary.textContent = formatTime(t);
+        timeSecondary.textContent = `${musicalStr} • F: ${Math.floor(t * (state.project.fps || 30))}`;
+      }
+
+      const chapters = state.project.chapters || [];
+      const ch = chapters.find(c => t >= c.start && t < c.end) || chapters[chapters.length - 1] || { index: 0, name: 'Main' };
+      document.getElementById('cur-chapter-badge').textContent = `CH ${ch.index}: ${ch.name} • Bar ${m.short}`;
+
+      if (document.getElementById('tab-audio').classList.contains('active')) {
+        document.getElementById('audio-scrub-time').textContent = clockStr;
+        drawAudioWaveform();
+      }
+    }
+
+    function setupPlayer() {
+      const btnPlay = document.getElementById('btn-play');
+      btnPlay.addEventListener('click', () => {
+        if (state.playing) window.slopscore.studio.pause();
+        else window.slopscore.studio.play();
+      });
+
+      video.addEventListener('timeupdate', () => {
+        if (state.previewMode === 'video') {
+          updateTransportReadout(video.currentTime);
+        }
+      });
+
+      document.getElementById('time-readout-wrap').addEventListener('click', () => {
+        state.timeDisplayMode = state.timeDisplayMode === 'musical' ? 'clock' : 'musical';
+        updateTransportReadout(state.currentTime);
+      });
+
+      document.getElementById('inp-tempo-bpm').addEventListener('change', (e) => {
+        state.bpm = Math.max(40, Math.min(240, parseFloat(e.target.value) || 120));
+        state.project.audio.bpm = state.bpm;
+        rebuildClockAndTimeline();
+        drawTimelineMusicalGrid();
+        updateTransportReadout(state.currentTime);
+      });
+
+      document.getElementById('sel-musical-snap').addEventListener('change', (e) => {
+        state.musicalSnap = e.target.value;
+      });
+
+      document.getElementById('btn-snap-playhead').addEventListener('click', () => {
+        const mode = state.musicalSnap === 'free' ? 'bar' : state.musicalSnap;
+        seekTransport(state.clock.snap(state.currentTime, mode));
+      });
+
+      document.getElementById('btn-step-back').addEventListener('click', () => {
+        seekTransport(state.currentTime - 1 / (state.project.fps || 30));
+      });
+      document.getElementById('btn-step-fwd').addEventListener('click', () => {
+        seekTransport(state.currentTime + 1 / (state.project.fps || 30));
+      });
+
+      document.getElementById('btn-mark-in').addEventListener('click', () => {
+        state.inPoint = state.currentTime;
+        updateRangeHighlight();
+      });
+      document.getElementById('btn-mark-out').addEventListener('click', () => {
+        state.outPoint = state.currentTime;
+        state.isLoopingRange = true;
+        document.getElementById('cur-loop-badge').style.display = 'block';
+        updateRangeHighlight();
+      });
+      document.getElementById('btn-clear-range').addEventListener('click', () => {
+        state.inPoint = null;
+        state.outPoint = null;
+        state.isLoopingRange = false;
+        document.getElementById('cur-loop-badge').style.display = 'none';
+        document.getElementById('timeline-in-out').style.display = 'none';
+        document.getElementById('btn-clear-range').style.display = 'none';
+      });
+
+      document.getElementById('btn-capture-frame').addEventListener('click', async () => {
+        const dataUrl = await window.slopscore.studio.captureFrame();
+        openNoteModal({
+          title: `Frame ${Math.floor(state.currentTime * 30)} Snapshot Review`,
+          timeStart: parseFloat(state.currentTime.toFixed(2)),
+          mediaDataUrl: dataUrl
+        });
+      });
+
+      document.getElementById('btn-quick-note').addEventListener('click', () => openNoteModal());
+      document.getElementById('btn-drawer-add').addEventListener('click', () => openNoteModal());
+      document.getElementById('btn-new-note-full').addEventListener('click', () => openNoteModal());
+
+      // Header Engine Switcher & Live Preview Toggle
+      document.getElementById('hdr-renderer-select').addEventListener('change', async (e) => {
+        state.renderer = e.target.value;
+        state.project.renderer = state.renderer;
+        if (state.previewMode === 'live') {
+          await setPreviewMode('live');
+        } else {
+          document.getElementById('cur-engine-badge').textContent = `VIDEO (${state.renderer.toUpperCase()})`;
+        }
+      });
+
+      document.getElementById('btn-live-preview-toggle').addEventListener('click', async () => {
+        await setPreviewMode(state.previewMode === 'live' ? 'video' : 'live');
+      });
+
+      // Header Assistant Drawer Toggle
+      document.getElementById('btn-toggle-assistant').addEventListener('click', () => {
+        document.getElementById('assistant-drawer').classList.toggle('open');
+      });
+    }
+
+    function updateRangeHighlight() {
+      const el = document.getElementById('timeline-in-out');
+      if (state.inPoint !== null && state.outPoint !== null) {
+        const lo = Math.min(state.inPoint, state.outPoint);
+        const hi = Math.max(state.inPoint, state.outPoint);
+        el.style.left = ((lo / state.duration) * 100) + '%';
+        el.style.width = (((hi - lo) / state.duration) * 100) + '%';
+        el.style.display = 'block';
+        document.getElementById('btn-clear-range').style.display = 'inline-flex';
+      }
+    }
+
+    // --- AUDIO & STEMS MIXER ---
+    async function setupAudioEditor() {
+      try {
+        const [resStems, resFeats] = await Promise.all([
+          fetch('/api/stems'),
+          fetch('/api/features')
+        ]);
+        const dataStems = await resStems.json();
+        const dataFeats = await resFeats.json();
+
+        state.stems = dataStems.stems || [];
+        state.audioFeatures = dataFeats.frames || [];
+        rebuildClockAndTimeline();
+
+        const selStem = document.getElementById('sel-master-audio-stem');
+        selStem.innerHTML = '';
+        state.stems.forEach(s => {
+          const opt = document.createElement('option');
+          opt.value = s.id;
+          opt.textContent = `Stem: ${s.name}`;
+          selStem.appendChild(opt);
+        });
+
+        const stemsContainer = document.getElementById('stems-container');
+        stemsContainer.innerHTML = '';
+        state.stems.forEach(stem => {
+          const a = new Audio(stem.file);
+          a.preload = 'none';
+          state.stemAudios[stem.id] = a;
+          state.stemSolos[stem.id] = false;
+          state.stemMutes[stem.id] = false;
+
+          const card = document.createElement('div');
+          card.className = `stem-card ${stem.id === 'master' ? 'active' : ''}`;
+          card.id = `stem-card-${stem.id}`;
+          card.innerHTML = `
+            <div class="stem-card-top">
+              <div class="stem-title-wrap">
+                <div class="stem-color-indicator" style="background:${stem.color || '#64b5a0'};"></div>
+                <span class="stem-name">${escapeHtml(stem.name)}</span>
+              </div>
+              <div class="stem-btn-group">
+                <button class="btn-solo" data-stem-solo="${stem.id}">S</button>
+                <button class="btn-mute" data-stem-mute="${stem.id}">M</button>
+              </div>
+            </div>
+            <div class="stem-desc">${escapeHtml(stem.desc || stem.role || '')}</div>
+            <div class="stem-controls-row">
+              <span style="color:var(--text-muted);">VOL</span>
+              <input type="range" class="stem-volume-slider" data-stem-vol="${stem.id}" min="0" max="1" step="0.02" value="1.0">
+            </div>
+          `;
+          card.addEventListener('click', () => {
+            state.activeStemId = stem.id;
+            document.querySelectorAll('.stem-card').forEach(c => c.classList.remove('active'));
+            card.classList.add('active');
+            document.getElementById('cur-stem-title').textContent = `${stem.name.toUpperCase()} WAVEFORM`;
+            document.getElementById('cur-stem-role').textContent = stem.role || stem.desc || '';
+            drawAudioWaveform();
+          });
+          stemsContainer.appendChild(card);
+        });
+
+        stemsContainer.querySelectorAll('[data-stem-solo]').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const id = btn.getAttribute('data-stem-solo');
+            window.slopscore.studio.setStemMix({ stemId: id, solo: !state.stemSolos[id] });
+          });
+        });
+        stemsContainer.querySelectorAll('[data-stem-mute]').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const id = btn.getAttribute('data-stem-mute');
+            window.slopscore.studio.setStemMix({ stemId: id, mute: !state.stemMutes[id] });
+          });
+        });
+        stemsContainer.querySelectorAll('[data-stem-vol]').forEach(rng => {
+          rng.addEventListener('input', (e) => {
+            e.stopPropagation();
+            const id = rng.getAttribute('data-stem-vol');
+            window.slopscore.studio.setStemMix({ stemId: id, volume: parseFloat(rng.value) });
+          });
+        });
+
+        drawTimelineWaveform();
+        drawTimelineMusicalGrid();
+      } catch (err) {
+        console.warn('Audio editor setup warning:', err);
+      }
+    }
+
+    function syncStemsTime(t) {
+      Object.values(state.stemAudios).forEach(a => {
+        try { if (Math.abs(a.currentTime - t) > 0.05) a.currentTime = t; } catch { /* ignore */ }
+      });
+    }
+
+    window.setWaveformZoom = function(z) {
+      state.waveformZoom = z;
+      drawAudioWaveform();
+      drawAudioFeatures();
+    };
+
+    function drawAudioWaveform() {
+      const canvas = document.getElementById('audio-waveform-canvas');
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = (rect.width || 600) * (window.devicePixelRatio || 1);
+      canvas.height = (rect.height || 130) * (window.devicePixelRatio || 1);
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width, H = canvas.height;
+      ctx.fillStyle = '#060a12';
+      ctx.fillRect(0, 0, W, H);
+
+      const curStem = state.stems.find(s => s.id === state.activeStemId) || { color: '#64b5a0' };
+      const frames = state.audioFeatures.length ? state.audioFeatures : Array.from({ length: 120 }, (_, i) => [0.35 + 0.2 * Math.sin(i * 0.2), 0.3, 0.3, 0.2, 0.1, 0]);
+      const stepX = W / frames.length;
+      ctx.fillStyle = (curStem.color || '#64b5a0') + 'aa';
+      for (let i = 0; i < frames.length; i++) {
+        const barH = Math.max(2, frames[i][0] * H * 0.65);
+        ctx.fillRect(i * stepX, H / 2 - barH / 2, Math.max(1, stepX - 0.5), barH);
+      }
+      const curX = (state.currentTime / Math.max(1, state.duration)) * W;
+      ctx.strokeStyle = '#c07a78';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(curX, 0);
+      ctx.lineTo(curX, H);
+      ctx.stroke();
+    }
+
+    function drawAudioFeatures() {
+      const canvas = document.getElementById('audio-features-canvas');
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = (rect.width || 600) * (window.devicePixelRatio || 1);
+      canvas.height = (rect.height || 60) * (window.devicePixelRatio || 1);
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width, H = canvas.height;
+      ctx.fillStyle = '#04070d';
+      ctx.fillRect(0, 0, W, H);
+      const frames = state.audioFeatures;
+      if (!frames || !frames.length) return;
+      const curves = [
+        { idx: 1, color: '#38bdf8' },
+        { idx: 2, color: '#a855f7' },
+        { idx: 3, color: '#fbbf24' },
+        { idx: 4, color: '#f43f5e' },
+        { idx: 5, color: '#10b981' }
+      ];
+      curves.forEach(c => {
+        ctx.strokeStyle = c.color;
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        for (let i = 0; i < frames.length; i++) {
+          const x = (i / frames.length) * W;
+          const y = H - (frames[i][c.idx] * (H - 4));
+          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      });
+    }
+
+    // --- VIEW 3: CONTACT SHEET & CHAPTER PLAN ---
+    function setupSheetView() {
+      const grid = document.getElementById('sheet-grid');
+      grid.innerHTML = '';
+      const sheetTimes = state.project.sheet?.times || [];
+      sheetTimes.forEach((t, i) => {
+        const cell = document.createElement('div');
+        cell.className = 'sheet-cell';
+        cell.innerHTML = `<span class="cell-badge">#${i + 1} (${t}s)</span>`;
+        cell.addEventListener('click', () => {
+          seekTransport(t);
+          activateTab('master');
+        });
+        grid.appendChild(cell);
+      });
+
+      const chapters = state.project.chapters || [];
+      document.getElementById('sheet-chapters-summary').textContent = `${state.duration}s Total (${chapters.length} Chapters)`;
+      const chaptersList = document.getElementById('chapters-list');
+      chaptersList.innerHTML = '';
+
+      chapters.forEach(ch => {
+        const ovrClip = state.overrides?.chapters?.[ch.id]?.clipLoopId;
+        const activeClipId = ovrClip || ch.clipLoopId || ch.asset || 'none';
+        const card = document.createElement('div');
+        card.className = 'chapter-card';
+        card.innerHTML = `
+          <div class="chapter-card-top">
+            <span class="chapter-card-title">Chapter ${ch.index}: ${escapeHtml(ch.name)}</span>
+            <div style="display:flex; gap:4px; align-items:center;">
+              <span class="note-time-badge" style="color:var(--accent-teal);">Bar ${ch.startBar}–${ch.endBar}</span>
+              <span class="note-time-badge" style="color:var(--text-muted);">${ch.start.toFixed(1)}s–${ch.end.toFixed(1)}s</span>
+            </div>
+          </div>
+          <div class="chapter-card-meta">Rig: <code>${escapeHtml(ch.particleRig)}</code> • Clip: <code>${escapeHtml(activeClipId)}</code></div>
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-top:4px;">
+            <select class="form-control" data-bind-chapter="${ch.index}" style="font-size:10.5px; padding:2px 6px; max-width:190px;">
+              <option value="">Bind Saved Clip…</option>
+              ${state.clips.map(c => `<option value="${escapeHtml(c.id)}" ${c.id === activeClipId ? 'selected' : ''}>${escapeHtml(c.name)}</option>`).join('')}
+            </select>
+            <div style="display:flex; gap:4px;">
+              <button class="btn btn-sm" data-jump-ch="${ch.start}">Inspect</button>
+              <button class="btn btn-sm btn-gold" data-note-ch="${escapeHtml(ch.name)}" data-start="${ch.start}" data-end="${ch.end}">+ Note</button>
+            </div>
+          </div>
+        `;
+        chaptersList.appendChild(card);
+      });
+
+      chaptersList.querySelectorAll('[data-jump-ch]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          seekTransport(parseFloat(btn.getAttribute('data-jump-ch')));
+          activateTab('master');
+        });
+      });
+      chaptersList.querySelectorAll('[data-note-ch]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          openNoteModal({
+            title: `${btn.getAttribute('data-note-ch')} Feedback`,
+            chapter: btn.getAttribute('data-note-ch'),
+            timeStart: parseFloat(btn.getAttribute('data-start')),
+            timeEnd: parseFloat(btn.getAttribute('data-end'))
+          });
+        });
+      });
+      chaptersList.querySelectorAll('[data-bind-chapter]').forEach(sel => {
+        sel.addEventListener('change', () => {
+          if (sel.value) {
+            window.slopscore.studio.bindClip({
+              clipId: sel.value,
+              chapterIndex: parseInt(sel.getAttribute('data-bind-chapter'), 10)
+            });
+          }
+        });
+      });
+    }
+
+    // --- VIEW 4: ASSET & CLIP LIBRARY + A/B LOOP FINDER ---
+    async function setupAssetExplorer() {
+      await Promise.all([loadSources(), loadClipsList()]);
+      initAssetLibraryUI();
+    }
+
+    async function loadSources() {
+      try {
+        const res = await fetch('/api/sources');
+        const data = await res.json();
+        state.sources = data.sources || [];
+        renderSourcesList();
+      } catch (err) {
+        console.warn('Failed to load sources:', err);
+      }
+    }
+
+    async function loadClipsList() {
+      try {
+        const res = await fetch('/api/clips');
+        const data = await res.json();
+        state.clips = data.clips || [];
+        renderClipsSidebarList();
+        renderSourceClips();
+        setupSheetView();
+      } catch (err) {
+        console.warn('Failed to load clips:', err);
+      }
+    }
+
+    function initAssetLibraryUI() {
+      const btnSources = document.getElementById('tab-btn-sources');
+      const btnClips = document.getElementById('tab-btn-clips');
+      const sourcesList = document.getElementById('assets-list');
+      const clipsList = document.getElementById('clips-sidebar-list');
+
+      btnSources.addEventListener('click', () => {
+        btnSources.classList.add('active');
+        btnClips.classList.remove('active');
+        sourcesList.style.display = 'flex';
+        clipsList.style.display = 'none';
+      });
+      btnClips.addEventListener('click', () => {
+        btnClips.classList.add('active');
+        btnSources.classList.remove('active');
+        sourcesList.style.display = 'none';
+        clipsList.style.display = 'flex';
+      });
+
+      document.querySelectorAll('#source-filter-pills .pill-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('#source-filter-pills .pill-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          state.sourceFilter = btn.getAttribute('data-filter') || 'all';
+          renderSourcesList();
+        });
+      });
+
+      const btnViewToggle = document.getElementById('btn-view-mode-toggle');
+      const singleWrapper = document.getElementById('single-player-wrapper');
+      const abWrapper = document.getElementById('ab-compare-wrapper');
+      const txtViewMode = document.getElementById('txt-view-mode');
+
+      btnViewToggle.addEventListener('click', () => {
+        if (state.assetViewMode === 'single') {
+          state.assetViewMode = 'ab';
+          singleWrapper.style.display = 'none';
+          abWrapper.style.display = 'grid';
+          txtViewMode.textContent = 'Single Player';
+          btnViewToggle.classList.add('btn-gold');
+          updateABSeamCanvases();
+        } else {
+          state.assetViewMode = 'single';
+          singleWrapper.style.display = 'flex';
+          abWrapper.style.display = 'none';
+          txtViewMode.textContent = 'A/B Seam Compare';
+          btnViewToggle.classList.remove('btn-gold');
+          stopABFlip();
+        }
+      });
+
+      const rngIn = document.getElementById('rng-asset-in');
+      const rngOut = document.getElementById('rng-asset-out');
+
+      rngIn.addEventListener('input', () => {
+        const inVal = parseFloat(rngIn.value);
+        let outVal = parseFloat(rngOut.value);
+        if (outVal <= inVal) {
+          outVal = Math.min(assetVideo.duration || 10, inVal + 0.5);
+          rngOut.value = outVal;
+        }
+        try { assetVideo.currentTime = inVal; } catch { /* ignore */ }
+        updateAssetLoopDisplay();
+        if (state.assetViewMode === 'ab') updateABSeamCanvases();
+      });
+
+      rngOut.addEventListener('input', () => {
+        let inVal = parseFloat(rngIn.value);
+        const outVal = parseFloat(rngOut.value);
+        if (inVal >= outVal) {
+          inVal = Math.max(0, outVal - 0.5);
+          rngIn.value = inVal;
+        }
+        try { assetVideo.currentTime = outVal; } catch { /* ignore */ }
+        updateAssetLoopDisplay();
+        if (state.assetViewMode === 'ab') updateABSeamCanvases();
+      });
+
+      document.getElementById('btn-ab-flip').addEventListener('click', toggleABFlip);
+      document.getElementById('btn-automatch-loop').addEventListener('click', () => {
+        window.slopscore.studio.automatchLoop({});
+      });
+
+      document.getElementById('btn-quantize-loop').addEventListener('click', () => {
+        const barSec = state.clock.barSec;
+        let inVal = Math.round(parseFloat(rngIn.value) / barSec) * barSec;
+        let outVal = Math.round(parseFloat(rngOut.value) / barSec) * barSec;
+        if (outVal <= inVal) outVal = inVal + barSec;
+        rngIn.value = inVal;
+        rngOut.value = outVal;
+        updateAssetLoopDisplay();
+        if (state.assetViewMode === 'ab') updateABSeamCanvases();
+      });
+
+      document.getElementById('btn-asset-annotate').addEventListener('click', promptSaveClip);
+      document.getElementById('btn-add-clip-direct').addEventListener('click', promptSaveClip);
+    }
+
+    async function updateABSeamCanvases() {
+      const canvasIn = document.getElementById('ab-canvas-in');
+      const canvasOut = document.getElementById('ab-canvas-out');
+      const inVal = parseFloat(document.getElementById('rng-asset-in').value) || 0;
+      const outVal = parseFloat(document.getElementById('rng-asset-out').value) || 4;
+      await grabVideoFrame(assetVideo, inVal, canvasIn);
+      await grabVideoFrame(assetVideo, outVal, canvasOut);
+      const metric = compareCanvases(canvasIn, canvasOut);
+      state.loopMatchScore = metric.match;
+      updateLoopBadge(document.getElementById('loop-diff-badge'), metric);
+    }
+
+    function toggleABFlip() {
+      const btn = document.getElementById('btn-ab-flip');
+      if (state.abFlipInterval) {
+        stopABFlip();
+        btn.classList.remove('btn-gold');
+      } else {
+        btn.classList.add('btn-gold');
+        const cIn = document.getElementById('ab-canvas-in');
+        const cOut = document.getElementById('ab-canvas-out');
+        state.abFlipInterval = setInterval(() => {
+          state.abFlipState = !state.abFlipState;
+          if (cIn && cOut) {
+            cIn.parentElement.style.opacity = state.abFlipState ? '1.0' : '0.25';
+            cOut.parentElement.style.opacity = state.abFlipState ? '0.25' : '1.0';
+          }
+        }, 350);
+      }
+    }
+
+    function stopABFlip() {
+      if (state.abFlipInterval) {
+        clearInterval(state.abFlipInterval);
+        state.abFlipInterval = null;
+      }
+      const cIn = document.getElementById('ab-canvas-in');
+      const cOut = document.getElementById('ab-canvas-out');
+      if (cIn) cIn.parentElement.style.opacity = '1.0';
+      if (cOut) cOut.parentElement.style.opacity = '1.0';
+    }
+
+    function renderSourcesList() {
+      const list = document.getElementById('assets-list');
+      list.innerHTML = '';
+      let filtered = state.sources;
+      if (state.sourceFilter !== 'all') {
+        filtered = filtered.filter(s => s.category === state.sourceFilter || s.type === state.sourceFilter);
+      }
+      if (!filtered.length) {
+        list.innerHTML = '<div style="font-size:11px; color:var(--text-muted); padding:8px;">No sources in assets/ yet.</div>';
+        return;
+      }
+      filtered.forEach((s, idx) => {
+        const item = document.createElement('div');
+        item.className = `asset-item ${state.currentSource && state.currentSource.id === s.id ? 'active' : ''}`;
+        item.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="asset-name">${escapeHtml(s.filename)}</div>
+            ${s.clipCount > 0 ? `<span style="font-size:9px; color:var(--accent-gold);">${s.clipCount} clips</span>` : ''}
+          </div>
+          <div class="asset-meta">${s.type.toUpperCase()} • ${(s.size / 1024 / 1024).toFixed(2)} MB</div>
+        `;
+        item.addEventListener('click', () => selectSourceItem(s));
+        list.appendChild(item);
+        if (!state.currentSource && idx === 0) selectSourceItem(s);
+      });
+    }
+
+    function selectSourceItem(source) {
+      state.currentSource = source;
+      document.getElementById('inspector-title').textContent = source.filename;
+      document.getElementById('inspector-subtitle').textContent = `${source.category.toUpperCase()} • ${source.type.toUpperCase()}`;
+      assetVideo.src = source.previewUrl || source.url;
+      assetVideo.onloadedmetadata = () => {
+        const dur = assetVideo.duration || 10;
+        const rngIn = document.getElementById('rng-asset-in');
+        const rngOut = document.getElementById('rng-asset-out');
+        rngIn.max = dur;
+        rngOut.max = dur;
+        rngIn.value = 0;
+        rngOut.value = Math.min(dur, 4.0);
+        updateAssetLoopDisplay();
+        if (state.assetViewMode === 'ab') updateABSeamCanvases();
+      };
+      renderSourcesList();
+      renderSourceClips();
+    }
+
+    function updateAssetLoopDisplay() {
+      const inVal = parseFloat(document.getElementById('rng-asset-in').value) || 0;
+      const outVal = parseFloat(document.getElementById('rng-asset-out').value) || 4;
+      const inMus = secondsToMusical(inVal, state.bpm);
+      const outMus = secondsToMusical(outVal, state.bpm);
+      const dur = Math.max(0.01, outVal - inVal);
+
+      document.getElementById('lbl-asset-in').textContent = `${inVal.toFixed(2)}s (B${inMus.bar}.${inMus.beat})`;
+      document.getElementById('lbl-asset-out').textContent = `${outVal.toFixed(2)}s (B${outMus.bar}.${outMus.beat})`;
+      document.getElementById('loop-time-readout').textContent =
+        `IN: ${inVal.toFixed(2)}s (B${inMus.short}) | OUT: ${outVal.toFixed(2)}s (B${outMus.short}) | DUR: ${dur.toFixed(2)}s`;
+      document.getElementById('ab-time-in').textContent = `${inVal.toFixed(2)}s • Bar ${inMus.short}`;
+      document.getElementById('ab-time-out').textContent = `${outVal.toFixed(2)}s • Bar ${outMus.short}`;
+    }
+
+    function renderClipsSidebarList() {
+      const list = document.getElementById('clips-sidebar-list');
+      list.innerHTML = '';
+      if (!state.clips.length) {
+        list.innerHTML = '<div style="font-size:11px; color:var(--text-muted); padding:8px;">No saved clips yet.</div>';
+        return;
+      }
+      state.clips.forEach(clip => {
+        const card = document.createElement('div');
+        card.className = 'clip-card';
+        card.innerHTML = `
+          <div class="clip-card-header">
+            <span class="clip-card-name">${escapeHtml(clip.name)}</span>
+            <span style="font-size:9.5px; color:var(--accent-teal);">${(clip.duration || (clip.outSec - clip.inSec) || 0).toFixed(1)}s</span>
+          </div>
+          <div class="clip-card-meta"><span>${escapeHtml(clip.sourceId || '')}</span></div>
+        `;
+        card.addEventListener('click', () => {
+          document.getElementById('rng-asset-in').value = clip.inSec || 0;
+          document.getElementById('rng-asset-out').value = clip.outSec || 4;
+          updateAssetLoopDisplay();
+        });
+        list.appendChild(card);
+      });
+    }
+
+    function renderSourceClips() {
+      const container = document.getElementById('source-clips-container');
+      container.innerHTML = '';
+      const filtered = state.currentSource
+        ? state.clips.filter(c => c.sourceId === state.currentSource.id || c.sourceId === state.currentSource.filename)
+        : state.clips;
+      document.getElementById('saved-clips-title').textContent = `SAVED CLIPS (${filtered.length})`;
+      filtered.forEach(clip => {
+        const card = document.createElement('div');
+        card.className = 'clip-card';
+        card.innerHTML = `
+          <div class="clip-card-header">
+            <span class="clip-card-name">${escapeHtml(clip.name)}</span>
+            <span style="font-size:9.5px; color:var(--accent-teal);">${(clip.inSec || 0).toFixed(2)}s–${(clip.outSec || 0).toFixed(2)}s</span>
+          </div>
+          <div class="clip-card-tags">${(clip.tags || []).map(t => `<span class="clip-tag-pill">${escapeHtml(t)}</span>`).join('')}</div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    async function promptSaveClip() {
+      const inSec = parseFloat(document.getElementById('rng-asset-in').value) || 0;
+      const outSec = parseFloat(document.getElementById('rng-asset-out').value) || 4;
+      const name = prompt('Clip name:', `${state.currentSource?.base || 'Clip'} Loop`);
+      if (!name) return;
+      await window.slopscore.studio.saveClip({
+        name,
+        sourceId: state.currentSource?.id || 'source.mp4',
+        inSec,
+        outSec,
+        mode: document.getElementById('sel-asset-loop-mode').value || 'loop',
+        speed: parseFloat(document.getElementById('sel-asset-speed').value || '1.0'),
+        tags: ['loop']
+      });
+    }
+
+    // --- VERSIONS & NOTES ---
+    async function loadVersions() {
+      try {
+        const res = await fetch('/api/versions');
+        const data = await res.json();
+        state.versions = data.versions || [];
+        state.activeVersion = data.activeVersion || 'v1.0';
+        renderVersionSelector();
+      } catch (err) {
+        console.warn('Load versions error:', err);
+      }
+    }
+
+    function renderVersionSelector() {
+      const select = document.getElementById('hdr-version-select');
+      const noteVerSelect = document.getElementById('inp-note-ver');
+      select.innerHTML = '<option value="all">● [All Versions]</option>';
+      noteVerSelect.innerHTML = '';
+      state.versions.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v.id;
+        opt.textContent = `${v.id} — ${v.name}`;
+        if (state.selectedVersionFilter === v.id) opt.selected = true;
+        select.appendChild(opt);
+
+        const mOpt = document.createElement('option');
+        mOpt.value = v.id;
+        mOpt.textContent = `${v.id} — ${v.name}`;
+        if (v.id === state.activeVersion) mOpt.selected = true;
+        noteVerSelect.appendChild(mOpt);
+      });
+    }
+
+    async function loadNotes() {
+      try {
+        const res = await fetch('/api/notes');
+        state.notes = await res.json();
+        renderNotes();
+      } catch (err) {
+        console.warn('Load notes error:', err);
+      }
+    }
+
+    function getFilteredNotes() {
+      return (state.notes || []).filter(n => {
+        if (state.selectedVersionFilter !== 'all' && (n.version || state.activeVersion) !== state.selectedVersionFilter) return false;
+        if (state.notesStatusFilter === 'active' && (n.status === 'resolved' || n.archived)) return false;
+        if (state.notesStatusFilter === 'resolved' && n.status !== 'resolved') return false;
+        if (state.notesStatusFilter === 'archived' && !n.archived) return false;
+        if (!state.showArchivedNotes && n.archived) return false;
+        if (state.searchQuery) {
+          const q = state.searchQuery.toLowerCase();
+          if (!(n.title || '').toLowerCase().includes(q) && !(n.text || '').toLowerCase().includes(q)) return false;
+        }
+        return true;
+      });
+    }
+
+    function renderNotes() {
+      const filtered = getFilteredNotes();
+      document.getElementById('notes-badge').textContent = filtered.length;
+
+      const pinsContainer = document.getElementById('timeline-pins');
+      pinsContainer.innerHTML = '';
+      filtered.forEach(n => {
+        const pin = document.createElement('div');
+        pin.className = 'time-pin';
+        pin.style.left = (((n.timeStart || 0) / Math.max(1, state.duration)) * 100) + '%';
+        pin.title = `${n.title} (${formatTime(n.timeStart || 0)})`;
+        pin.addEventListener('click', (e) => {
+          e.stopPropagation();
+          seekTransport(n.timeStart || 0);
+        });
+        pinsContainer.appendChild(pin);
+      });
+
+      const drawerList = document.getElementById('drawer-notes-list');
+      const allContainer = document.getElementById('all-notes-container');
+      drawerList.innerHTML = '';
+      allContainer.innerHTML = '';
+
+      if (!filtered.length) {
+        drawerList.innerHTML = '<div style="text-align:center; padding:24px; font-size:11px; color:var(--text-muted);">No annotations yet.</div>';
+        allContainer.innerHTML = '<div style="text-align:center; padding:32px; font-size:12px; color:var(--text-muted);">No annotations matching filter criteria.</div>';
+        return;
+      }
+
+      filtered.forEach(n => {
+        drawerList.appendChild(createNoteCard(n));
+        allContainer.appendChild(createNoteCard(n));
+      });
+    }
+
+    function createNoteCard(n) {
+      const card = document.createElement('div');
+      card.className = `note-card ${n.archived ? 'is-archived' : ''}`;
+      const mStart = secondsToMusical(n.timeStart || 0, state.bpm);
+      card.innerHTML = `
+        <div class="note-card-header">
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span class="note-ver-badge">${escapeHtml(n.version || state.activeVersion)}</span>
+            <span class="note-time-badge" style="color:var(--accent-teal);">Bar ${mStart.short}</span>
+            <span class="note-time-badge">${formatTime(n.timeStart || 0)}</span>
+          </div>
+          <span class="note-status-badge status-${escapeHtml(n.status || 'fix')}">${escapeHtml((n.status || 'fix').toUpperCase())}</span>
+        </div>
+        <div class="note-card-title">${escapeHtml(n.title || 'Untitled Note')}</div>
+        <div class="note-card-body">${escapeHtml(n.text || '')}</div>
+        ${n.mediaUrl ? `<div class="note-card-media"><img src="${n.mediaUrl}"></div>` : ''}
+        <div class="note-card-footer">
+          <span>${escapeHtml(n.target || n.chapter || 'Master Cut')}</span>
+          <button class="btn btn-sm" data-jump-note="${n.timeStart || 0}">Jump</button>
+        </div>
+      `;
+      card.addEventListener('click', () => seekTransport(n.timeStart || 0));
+      return card;
+    }
+
+    // --- MODALS & RUN TERMINAL ---
+    function openNoteModal(defaults = {}) {
+      state.pendingMediaDataUrl = defaults.mediaDataUrl || null;
+      document.getElementById('inp-note-title').value = defaults.title || '';
+      const tStart = defaults.timeStart !== undefined ? defaults.timeStart : state.currentTime;
+      document.getElementById('inp-note-tstart').value = Number(tStart).toFixed(2);
+      document.getElementById('inp-note-barstart').value = secondsToMusical(tStart, state.bpm).short;
+      document.getElementById('inp-note-tend').value = defaults.timeEnd != null ? Number(defaults.timeEnd).toFixed(2) : '';
+      document.getElementById('inp-note-text').value = defaults.text || '';
+      document.getElementById('inp-note-chapter').value = defaults.chapter || defaults.target || 'Master Cut';
+
+      const thumb = document.getElementById('modal-thumb');
+      if (state.pendingMediaDataUrl) {
+        thumb.src = state.pendingMediaDataUrl;
+        thumb.style.display = 'block';
+      } else {
+        thumb.style.display = 'none';
+      }
+      document.getElementById('note-modal').classList.add('open');
+    }
+
+    function setupModals() {
+      const noteModal = document.getElementById('note-modal');
+      const closeNote = () => noteModal.classList.remove('open');
+      document.getElementById('btn-modal-close').addEventListener('click', closeNote);
+      document.getElementById('btn-modal-cancel').addEventListener('click', closeNote);
+      document.getElementById('btn-modal-save').addEventListener('click', async () => {
+        const title = document.getElementById('inp-note-title').value.trim() || 'Director Note';
+        const timeStart = parseFloat(document.getElementById('inp-note-tstart').value) || 0;
+        const timeEndRaw = document.getElementById('inp-note-tend').value;
+        const timeEnd = timeEndRaw ? parseFloat(timeEndRaw) : null;
+        const target = document.getElementById('inp-note-chapter').value.trim() || 'Master Cut';
+        const text = document.getElementById('inp-note-text').value.trim();
+        await window.slopscore.studio.addNote({ title, text, timeStart, timeEnd, target });
+        closeNote();
+      });
+
+      const snapModal = document.getElementById('snapshot-modal');
+      document.getElementById('btn-open-snapshot-modal').addEventListener('click', () => snapModal.classList.add('open'));
+      document.getElementById('btn-snap-modal-close').addEventListener('click', () => snapModal.classList.remove('open'));
+      document.getElementById('btn-snap-cancel').addEventListener('click', () => snapModal.classList.remove('open'));
+      document.getElementById('btn-snap-submit').addEventListener('click', async () => {
+        const id = document.getElementById('inp-snap-id').value.trim() || 'v1.0';
+        const name = document.getElementById('inp-snap-name').value.trim();
+        const description = document.getElementById('inp-snap-desc').value.trim();
+        const archiveResolvedNotes = document.getElementById('chk-snap-archive-notes').checked;
+        const createNextVersion = document.getElementById('chk-snap-next-version').checked;
+        const nextVersionId = document.getElementById('inp-snap-next-id').value.trim();
+        await fetch('/api/versions/snapshot', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, name, description, archiveResolvedNotes, createNextVersion, nextVersionId })
+        });
+        snapModal.classList.remove('open');
+        await loadVersions();
+        await loadNotes();
+      });
+
+      const clearModal = document.getElementById('clear-notes-modal');
+      document.getElementById('btn-open-clear-modal').addEventListener('click', () => clearModal.classList.add('open'));
+      document.getElementById('btn-clear-modal-close').addEventListener('click', () => clearModal.classList.remove('open'));
+      document.getElementById('btn-clear-modal-cancel').addEventListener('click', () => clearModal.classList.remove('open'));
+      document.getElementById('btn-clear-modal-confirm').addEventListener('click', async () => {
+        const filter = document.getElementById('sel-clear-scope').value;
+        await fetch('/api/notes/clear', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filter })
+        });
+        clearModal.classList.remove('open');
+        await loadNotes();
+      });
+
+      document.getElementById('btn-sync-disk').addEventListener('click', async () => {
+        await fetch('/api/notes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(state.notes)
+        });
+        showNotification('Synced notes to feedback/notes.json & FEEDBACK.md');
+      });
+    }
+
+    function setupRunControls() {
+      document.getElementById('btn-run-sheet').addEventListener('click', () => window.slopscore.studio.runCommand({ action: 'sheet' }));
+      document.getElementById('btn-run-recompile').addEventListener('click', () => window.slopscore.studio.runCommand({ action: 'build' }));
+      document.getElementById('btn-run-audio').addEventListener('click', () => window.slopscore.studio.runCommand({ action: 'audio' }));
+      document.getElementById('btn-run-preview').addEventListener('click', () => {
+        const range = (state.inPoint !== null && state.outPoint !== null)
+          ? `${state.inPoint.toFixed(1)}:${state.outPoint.toFixed(1)}`
+          : '0:15';
+        window.slopscore.studio.runCommand({ action: 'preview', range });
+      });
+      document.getElementById('btn-run-master').addEventListener('click', () => window.slopscore.studio.runCommand({ action: 'video' }));
+
+      const drawer = document.getElementById('build-terminal-drawer');
+      document.getElementById('btn-toggle-terminal').addEventListener('click', () => drawer.classList.toggle('open'));
+      document.getElementById('btn-term-close').addEventListener('click', () => drawer.classList.remove('open'));
+      document.getElementById('btn-term-clear').addEventListener('click', () => {
+        document.getElementById('term-log-stream').innerHTML = '';
+      });
+      document.getElementById('btn-term-kill').addEventListener('click', () => fetch('/api/run/kill', { method: 'POST' }));
+
+      try {
+        const sse = new EventSource('/api/run/stream');
+        sse.onmessage = (e) => {
+          try {
+            const data = JSON.parse(e.data);
+            const stream = document.getElementById('term-log-stream');
+            if (data.type === 'log' && data.line) {
+              const line = document.createElement('div');
+              line.className = `terminal-line ${data.line.isErr ? 'err' : ''}`;
+              line.textContent = data.line.text;
+              stream.appendChild(line);
+              stream.scrollTop = stream.scrollHeight;
+            } else if (data.type === 'start') {
+              document.getElementById('term-badge').className = 'badge-status running';
+              document.getElementById('term-badge').textContent = 'RUNNING';
+              document.getElementById('term-status-dot').className = 'status-dot running';
+            } else if (data.type === 'finish') {
+              document.getElementById('term-badge').className = `badge-status ${data.task?.exitCode === 0 ? 'completed' : 'failed'}`;
+              document.getElementById('term-badge').textContent = (data.task?.status || 'DONE').toUpperCase();
+              document.getElementById('term-status-dot').className = 'status-dot';
+              if (data.task?.artifact === 'sheet') {
+                document.getElementById('sheet-img').src = `/out/sheet.jpg?t=${Date.now()}`;
+              }
+            }
+          } catch { /* ignore */ }
+        };
+      } catch { /* ignore */ }
+    }
+
+    // --- CREATE `window.slopscore.studio` API (CONTRACTS.md §9) ---
+    function registerStudioClientApi() {
+      return createStudioApi({
+        getState() {
+          const t = state.currentTime;
+          const bar = state.clock.barAt(t);
+          const musical = state.clock.format(t);
+          const chapters = state.project.chapters || [];
+          const ch = chapters.find(c => t >= c.start && t < c.end) || chapters[chapters.length - 1] || { index: 0, id: 'ch-0', name: 'Main' };
+          const rngIn = document.getElementById('rng-asset-in');
+          const rngOut = document.getElementById('rng-asset-out');
+          return {
+            time: +t.toFixed(3),
+            bar: +bar.toFixed(3),
+            musical,
+            duration: state.duration,
+            playing: state.playing,
+            tab: state.activeTab,
+            chapter: { index: ch.index, id: ch.id, name: ch.name },
+            viewMode: state.previewMode,
+            renderer: state.renderer,
+            selectedSource: state.currentSource?.id || null,
+            loop: {
+              inSec: parseFloat(rngIn?.value || '0'),
+              outSec: parseFloat(rngOut?.value || '4'),
+              match: state.loopMatchScore
+            },
+            activeVersion: state.activeVersion,
+            snap: state.musicalSnap
+          };
+        },
+
+        async seek({ time, bar } = {}) {
+          let targetSec = time;
+          if (bar !== undefined && bar !== null) {
+            targetSec = typeof bar === 'string' ? state.clock.parse(bar) : state.clock.timeAtBar(Number(bar));
+          }
+          seekTransport(targetSec ?? 0);
+          return this.getState();
+        },
+
+        async play() {
+          state.playing = true;
+          if (state.previewMode === 'video') {
+            try { await video.play(); } catch { /* ignore */ }
+          } else {
+            const startWall = performance.now();
+            const startT = state.currentTime;
+            const tick = () => {
+              if (!state.playing) return;
+              const elapsed = (performance.now() - startWall) / 1000;
+              const nextT = (startT + elapsed) % Math.max(1, state.duration);
+              seekTransport(nextT);
+              state.liveRaf = requestAnimationFrame(tick);
+            };
+            state.liveRaf = requestAnimationFrame(tick);
+          }
+          return this.getState();
+        },
+
+        async pause() {
+          state.playing = false;
+          if (state.liveRaf) cancelAnimationFrame(state.liveRaf);
+          try { video.pause(); } catch { /* ignore */ }
+          if (masterAudio) { try { masterAudio.pause(); } catch { /* ignore */ } }
+          return this.getState();
+        },
+
+        async setTab(tabId) {
+          activateTab(tabId);
+          return this.getState();
+        },
+
+        async getProject() {
+          const res = await fetch('/api/project');
+          const data = await res.json();
+          state.projectData = data;
+          if (data.project) state.project = data.project;
+          return data;
+        },
+
+        async getClips() {
+          await loadClipsList();
+          return state.clips;
+        },
+
+        async getNotes() {
+          await loadNotes();
+          return state.notes;
+        },
+
+        async getSources() {
+          await loadSources();
+          return state.sources;
+        },
+
+        async getStems() {
+          return state.stems;
+        },
+
+        async addNote({ title, text, timeStart, timeEnd, target, tags } = {}) {
+          const note = {
+            id: `note_${Date.now()}`,
+            title: title || 'Director Note',
+            text: text || '',
+            timeStart: timeStart !== undefined ? Number(timeStart) : state.currentTime,
+            timeEnd: timeEnd !== undefined ? timeEnd : null,
+            target: target || 'Master Cut',
+            chapter: target || 'Master Cut',
+            status: 'fix',
+            version: state.activeVersion,
+            tags: Array.isArray(tags) ? tags : [],
+            archived: false,
+            createdAt: new Date().toISOString()
+          };
+          state.notes.push(note);
+          await fetch('/api/notes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(state.notes)
+          });
+          renderNotes();
+          return note;
+        },
+
+        async selectSource(sourceId) {
+          const found = state.sources.find(s => s.id === sourceId || s.filename === sourceId);
+          if (found) selectSourceItem(found);
+          return found || null;
+        },
+
+        async setLoop({ inSec, outSec } = {}) {
+          const rngIn = document.getElementById('rng-asset-in');
+          const rngOut = document.getElementById('rng-asset-out');
+          if (inSec !== undefined && rngIn) rngIn.value = inSec;
+          if (outSec !== undefined && rngOut) rngOut.value = outSec;
+          updateAssetLoopDisplay();
+          if (state.assetViewMode === 'ab') await updateABSeamCanvases();
+          return {
+            inSec: parseFloat(rngIn?.value || '0'),
+            outSec: parseFloat(rngOut?.value || '4'),
+            match: state.loopMatchScore
+          };
+        },
+
+        async automatchLoop({ sourceId, tolerance, window: scanWin = 1.0 } = {}) {
+          const rngIn = document.getElementById('rng-asset-in');
+          const rngOut = document.getElementById('rng-asset-out');
+          const inSec = parseFloat(rngIn?.value || '0');
+          const outSec = parseFloat(rngOut?.value || '4');
+          const badge = document.getElementById('loop-diff-badge');
+          if (badge) badge.textContent = 'Scanning candidate frames…';
+
+          const result = await runLoopAutomatch({
+            sourceId: sourceId || state.currentSource?.id,
+            videoEl: assetVideo,
+            inSec,
+            outSec,
+            window: scanWin
+          });
+
+          if (rngIn && typeof result.inSec === 'number') rngIn.value = result.inSec;
+          if (rngOut && typeof result.outSec === 'number') rngOut.value = result.outSec;
+          state.loopMatchScore = result.match ?? 95;
+          updateAssetLoopDisplay();
+          updateLoopBadge(badge, result, 'Optimal Match');
+          if (state.assetViewMode === 'ab') await updateABSeamCanvases();
+          return { inSec: result.inSec, outSec: result.outSec, match: result.match };
+        },
+
+        async saveClip({ name, sourceId, inSec, outSec, mode = 'loop', speed = 1, tags = [], notes = '' } = {}) {
+          const inMus = secondsToMusical(inSec || 0, state.bpm);
+          const outMus = secondsToMusical(outSec || 4, state.bpm);
+          const payload = {
+            name: name || 'Saved Clip',
+            sourceId: sourceId || state.currentSource?.id || 'asset.mp4',
+            inSec: Number(inSec) || 0,
+            outSec: Number(outSec) || 4,
+            inBar: inMus.short,
+            outBar: outMus.short,
+            mode,
+            speed: Number(speed) || 1,
+            tags,
+            annotations: notes
+          };
+          const res = await fetch('/api/clips', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+          await loadClipsList();
+          return data.clip || payload;
+        },
+
+        async bindClip({ clipId, chapterIndex } = {}) {
+          const ch = (state.project.chapters || [])[chapterIndex];
+          const chId = ch ? ch.id : `ch-${chapterIndex || 0}`;
+          state.overrides.chapters = state.overrides.chapters || {};
+          state.overrides.chapters[chId] = {
+            ...(state.overrides.chapters[chId] || {}),
+            clipLoopId: clipId
+          };
+          const res = await fetch('/api/overrides', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ replace: true, overrides: state.overrides })
+          });
+          const data = await res.json();
+          if (data.overrides) state.overrides = data.overrides;
+          rebuildClockAndTimeline();
+          setupSheetView();
+          if (state.previewMode === 'live' && state.liveHost) state.liveHost.renderAt(state.currentTime);
+          return state.overrides;
+        },
+
+        async getOverrides() {
+          const res = await fetch('/api/overrides');
+          state.overrides = await res.json();
+          return state.overrides;
+        },
+
+        async setOverrides(overrides = {}) {
+          const res = await fetch('/api/overrides', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ replace: true, overrides })
+          });
+          const data = await res.json();
+          state.overrides = data.overrides || overrides;
+          syncOverrideSliders();
+          rebuildClockAndTimeline();
+          if (state.previewMode === 'live' && state.liveHost) state.liveHost.renderAt(state.currentTime);
+          return state.overrides;
+        },
+
+        async setShaderParam({ param, value, chapterId } = {}) {
+          if (chapterId) {
+            state.overrides.chapters = state.overrides.chapters || {};
+            const curCh = state.overrides.chapters[chapterId] || {};
+            state.overrides.chapters[chapterId] = {
+              ...curCh,
+              shaders: { ...(curCh.shaders || {}), [param]: value }
+            };
+          } else {
+            state.overrides.shaders = { ...(state.overrides.shaders || {}), [param]: value };
+          }
+          const res = await fetch('/api/overrides', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ replace: true, overrides: state.overrides })
+          });
+          const data = await res.json();
+          if (data.overrides) state.overrides = data.overrides;
+          syncOverrideSliders();
+          rebuildClockAndTimeline();
+          if (state.previewMode === 'live' && state.liveHost) state.liveHost.renderAt(state.currentTime);
+          return state.overrides;
+        },
+
+        async setCameraParam({ param, value, chapterId } = {}) {
+          if (chapterId) {
+            state.overrides.chapters = state.overrides.chapters || {};
+            const curCh = state.overrides.chapters[chapterId] || {};
+            state.overrides.chapters[chapterId] = {
+              ...curCh,
+              camera: { ...(curCh.camera || {}), [param]: value }
+            };
+          } else {
+            state.overrides.camera = { ...(state.overrides.camera || {}), [param]: value };
+          }
+          const res = await fetch('/api/overrides', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ replace: true, overrides: state.overrides })
+          });
+          const data = await res.json();
+          if (data.overrides) state.overrides = data.overrides;
+          syncOverrideSliders();
+          rebuildClockAndTimeline();
+          if (state.previewMode === 'live' && state.liveHost) state.liveHost.renderAt(state.currentTime);
+          return state.overrides;
+        },
+
+        async setRendererParam({ param, value } = {}) {
+          if (state.liveHost && typeof state.liveHost.setParam === 'function') {
+            state.liveHost.setParam(param, value);
+            state.liveHost.renderAt(state.currentTime);
+          }
+          return { param, value };
+        },
+
+        async setStemMix({ stemId, mute, solo, volume } = {}) {
+          if (mute !== undefined) state.stemMutes[stemId] = Boolean(mute);
+          if (solo !== undefined) state.stemSolos[stemId] = Boolean(solo);
+          const audio = state.stemAudios[stemId];
+          if (audio && volume !== undefined) {
+            audio.volume = Math.max(0, Math.min(1, Number(volume)));
+          }
+          const anySolo = Object.values(state.stemSolos).some(Boolean);
+          state.stems.forEach(s => {
+            const card = document.getElementById(`stem-card-${s.id}`);
+            card?.querySelector('.btn-solo')?.classList.toggle('active', Boolean(state.stemSolos[s.id]));
+            card?.querySelector('.btn-mute')?.classList.toggle('active', Boolean(state.stemMutes[s.id]));
+            const a = state.stemAudios[s.id];
+            if (a) a.muted = anySolo ? !state.stemSolos[s.id] : Boolean(state.stemMutes[s.id]);
+          });
+          return { stemId, mute: state.stemMutes[stemId], solo: state.stemSolos[stemId], volume };
+        },
+
+        async runCommand({ action, range, customCmd } = {}) {
+          document.getElementById('build-terminal-drawer').classList.add('open');
+          const res = await fetch('/api/run', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action, range, customCmd })
+          });
+          return await res.json();
+        },
+
+        async captureFrame() {
+          const canvas = document.createElement('canvas');
+          canvas.width = state.project.resolution?.[0] || 1280;
+          canvas.height = state.project.resolution?.[1] || 720;
+          const ctx = canvas.getContext('2d');
+          const srcCanvas = state.previewMode === 'live' ? liveContainer.querySelector('canvas') : video;
+          try {
+            if (srcCanvas) ctx.drawImage(srcCanvas, 0, 0, canvas.width, canvas.height);
+          } catch { /* ignore */ }
+          return canvas.toDataURL('image/jpeg', 0.85);
+        }
+      });
+    }
+
+    // --- INITIALIZE STUDIO ---
+    async function init() {
+      setupTheme();
+      const studioApi = registerStudioClientApi();
+      await loadProjectManifest();
+      setupTabs();
+      setupTimeline();
+      setupPlayer();
+      setupOverridesPanel();
+      await setupAudioEditor();
+      setupSheetView();
+      await setupAssetExplorer();
+      setupModals();
+      setupRunControls();
+      await loadVersions();
+      await loadNotes();
+      updateTransportReadout(0);
+
+      // Initialize WebMCP in-browser tool registry & Genereti Assistant Drawer
+      await initWebMcpBridge(studioApi);
+      mountAssistant({
+        studio: studioApi,
+        root: document.getElementById('assistant-drawer-host')
+      });
+    }
+
+    init();
+  </script>
+</body>
+</html>

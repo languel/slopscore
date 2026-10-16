@@ -1,0 +1,37 @@
+{
+  "name": "slopscore",
+  "version": "2.0.0-alpha.1",
+  "description": "Agent-native procedural audio-visual engine, multi-engine renderer runtime, and interactive director studio.",
+  "type": "module",
+  "license": "MIT",
+  "author": "10,000 Choices Team",
+  "bin": {
+    "slopscore": "./bin/slopscore.mjs"
+  },
+  "main": "./kit/index.mjs",
+  "exports": {
+    ".": "./kit/index.mjs",
+    "./kit/*": "./kit/*",
+    "./renderers/*": "./renderers/*"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "studio": "node bin/slopscore.mjs studio templates/default",
+    "mcp": "node mcp/server.mjs",
+    "build:native": "node bin/slopscore.mjs build",
+    "doctor": "node bin/slopscore.mjs doctor"
+  },
+  "dependencies": {
+    "@jason.today/webmcp": "^0.1.13",
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "gsap": "^3.15.0",
+    "p5": "^2.3.4",
+    "pixi.js": "^8.22.0",
+    "puppeteer-core": "^25.14.0",
+    "three": "^0.186.1",
+    "zod": "^3.25.0"
+  }
+}

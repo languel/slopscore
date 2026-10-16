@@ -1,0 +1,10 @@
+[package]
+name = "slopscore-fframes"
+version = "2.0.0"
+edition = "2021"
+description = "Slopscore 2.0 fframes Rust vector & raster frame generator consuming context.bin"
+license = "MIT"
+
+[[bin]]
+name = "slopscore-fframes"
+path = "src/main.rs"

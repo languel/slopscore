@@ -1,0 +1,53 @@
+{
+  "activeVersion": "v5.0",
+  "versions": [
+    {
+      "id": "v4.0",
+      "name": "v4.0 - Initial Handoff Baseline",
+      "description": "Baseline consolidated from gemini work: initial procedural score and first-pass cuts",
+      "createdAt": "2026-10-15T15:00:00.000Z",
+      "status": "archived",
+      "videoUrl": "/out/versions/v4.1/video.mp4",
+      "sheetUrl": "/out/versions/v4.1/sheet.jpg",
+      "noteCount": 0
+    },
+    {
+      "id": "v4.1",
+      "name": "v4.1 - Butterfly Swarm, Catwalk & Quantized 164 BPM",
+      "description": "Solved 7 director notes: catwalk platform, 3D butterfly origami swarm, CRT & Sobel treatments, removed LOC slate & title cards, strict 164BPM Aphex stutter cut & Fmaj9 resolution",
+      "createdAt": "2026-10-15T16:50:00.000Z",
+      "status": "archived",
+      "videoUrl": "/out/versions/v4.1/video.mp4",
+      "sheetUrl": "/out/versions/v4.1/sheet.jpg",
+      "noteCount": 7
+    },
+    {
+      "id": "v4.1a",
+      "name": "v4.1 Snapshot Review Freeze",
+      "description": "Catwalk platforms, 3D origami butterfly swarm, CRT pixel & Sobel treatments, quantized 164 BPM stutter transitions, LOC logo removed.",
+      "createdAt": "2026-10-15T18:33:53.632Z",
+      "status": "archived",
+      "videoUrl": "/out/versions/v4.1a/video.mp4",
+      "sheetUrl": "/out/versions/v4.1a/sheet.jpg"
+    },
+    {
+      "id": "v4.2",
+      "name": "v4.2 - Studio UI & Measure Sync Architecture",
+      "description": "Studio UI aesthetic pass, AMS glyph minimalism, dark/light modes, stems audio preview, loop picker A/B seam compare, and clip library API",
+      "createdAt": "2026-10-15T18:33:53.632Z",
+      "status": "archived",
+      "videoUrl": "/out/video.mp4",
+      "sheetUrl": "/out/sheet.jpg"
+    },
+    {
+      "id": "v5.0",
+      "name": "v5.0 - Dual Particle Constellations & Musical Measure Sync",
+      "description": "Full 180s musical synchronization across 123 measures @ 164 BPM, dual particle systems (archival luma relief + generative 3D geometries) with constellation vector lines and phosphor glow shaders, dynamic virtual camera trajectories, workstation console with reactive LED meters, and free-flying origami butterfly swarms",
+      "createdAt": "2026-10-15T19:48:00.000Z",
+      "status": "active",
+      "videoUrl": "/out/versions/v5.0/video.mp4",
+      "sheetUrl": "/out/versions/v5.0/sheet.jpg",
+      "noteCount": 0
+    }
+  ]
+}
