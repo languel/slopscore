@@ -42,7 +42,7 @@ test('MeasureClock 1-based bar math, formatting, parsing, and snapping', () => {
 test('Project schema normalization & template loading', async () => {
   const def = await loadProject(path.join(REPO_ROOT, 'templates', 'default'));
   assert.equal(def.validation.ok, true);
-  assert.equal(def.project.chapters.length, 4);
+  assert.equal(def.project.chapters.length, 8);
 
   const ref = await loadProject(path.join(REPO_ROOT, 'templates', 'willnever-reference'));
   assert.equal(ref.validation.ok, true);

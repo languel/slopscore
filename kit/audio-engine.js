@@ -135,23 +135,25 @@ export class ProceduralScore {
   partAt(t) {
     if (Array.isArray(this.chapters) && this.chapters.length) {
       const bar = Math.floor(t / this.barSec) + 1;
-      const ch = this.chapters.find(c => bar >= (c.startBar || 1) && bar <= (c.endBar || 9999));
-      if (ch) {
+      const chIdx = this.chapters.findIndex(c => bar >= (c.startBar || 1) && bar <= (c.endBar || 9999));
+      if (chIdx !== -1) {
+        const ch = this.chapters[chIdx];
         if (ch.mood) {
           const MOOD_MAP = {
             intro: 0, sparse: 0, ambient: 0,
-            verse: 1, buildup: 1, arp: 1,
-            drop: 2, hook: 2, level1: 2,
-            dub: 3, groove: 3, halftime: 3,
-            breakdown: 4, minimal: 4,
-            spiral: 5, crescendo: 5,
-            climax: 6, peak: 6, max: 6,
-            outro: 7, coda: 7, release: 7
+            verse: 1, arp: 1,
+            buildup: 2, level1: 2, electro: 2, letters: 2,
+            drop: 3, hook: 3, heavy: 3, regret: 3,
+            dub: 4, groove: 4, halftime: 4, static: 4,
+            breakdown: 5, minimal: 5, forgetting: 5,
+            crescendo: 5,
+            climax: 6, peak: 6, max: 6, thunder: 6,
+            outro: 7, coda: 7, release: 7, sun: 7
           };
           const m = String(ch.mood).toLowerCase();
           if (MOOD_MAP[m] !== undefined) return MOOD_MAP[m];
         }
-        return ch.index % 8;
+        return chIdx % 8;
       }
     }
     const ct = this.canonTime(t);
@@ -253,30 +255,76 @@ export class ProceduralScore {
       const part = this.partAt(rawT);
       const chord = chordAtTime(rawT);
 
-      const inDropSilence = (t >= 33.1 && t < 34.0) || (t >= 123.1 && t < 124.0);
+      // Chapter-aware transition analysis
+      let isChapterEnd = false;
+      let chapterBarFrac = 0;
+      let inChapterDropSilence = false;
+      let inChapterRiser = false;
+      let curChapter = null;
+
+      if (Array.isArray(this.chapters) && this.chapters.length) {
+        const curBar = Math.floor(rawT / barSec) + 1;
+        const ch = this.chapters.find(c => curBar >= (c.startBar || 1) && curBar <= (c.endBar || 9999));
+        if (ch) {
+          curChapter = ch;
+          if (curBar === ch.endBar) {
+            isChapterEnd = true;
+            chapterBarFrac = (rawT % barSec) / barSec;
+            if (chapterBarFrac >= 0.72) inChapterDropSilence = true;
+            if (chapterBarFrac >= 0.35) inChapterRiser = true;
+          }
+        }
+      } else {
+        if ((t >= 33.1 && t < 34.0) || (t >= 123.1 && t < 124.0)) inChapterDropSilence = true;
+        if ((t >= 26.5 && t < 33.1) || (t >= 112.0 && t < 123.1)) inChapterRiser = true;
+      }
+
+      const inDropSilence = inChapterDropSilence || (t >= 33.1 && t < 34.0) || (t >= 123.1 && t < 124.0);
+
+      // BIOELECTRIC GROUNDING HUM (60Hz fundamental + 120Hz/180Hz mains lab grounding)
+      const humFund = Math.sin(2 * Math.PI * 60.0 * rawT);
+      const hum2 = Math.sin(2 * Math.PI * 120.0 * rawT) * 0.35;
+      const hum3 = Math.sin(2 * Math.PI * 180.0 * rawT) * 0.15;
+      const humDrift = 1.0 + 0.03 * Math.sin(2 * Math.PI * 0.12 * rawT);
+      const humRaw = (humFund + hum2 + hum3) * humDrift;
+      const humAmp = (part === 0 || part === 4 || part === 5 || part === 7) ? 0.026 : 0.014;
+      const humL = Math.tanh(humRaw * 1.5) * humAmp;
+      const humR = Math.tanh((humRaw + Math.sin(2 * Math.PI * 60.08 * rawT) * 0.18) * 1.5) * humAmp;
+      addSample('glitch', i, humL, humR);
+
+      // IONIZING CRACKLE & CORONA SPARKS (Bioelectricity)
+      const sparkProb = (part === 4) ? 0.0032 : (part === 6 || inChapterRiser) ? 0.0024 : 0.0006;
+      if (hash32(i + 1337) < sparkProb) {
+        const sparkDur = Math.min(totalSamples - i, Math.floor(0.005 * sr));
+        const arcFreq = 2200 + hash32(i + 42) * 5400;
+        let arcP = 0;
+        const sparkPan = 0.2 + 0.6 * hash32(i + 99);
+        for (let sj = 0; sj < sparkDur; sj++) {
+          const sdt = sj / sr;
+          arcP += (arcFreq * (1.0 - sdt * 60)) / sr;
+          const arcSig = (Math.sin(2 * Math.PI * arcP) * 0.45 + white[(i + sj) % noiseLen] * 0.85) * Math.exp(-sdt * 350) * 0.22;
+          addSample('glitch', i + sj, arcSig * sparkPan, arcSig * (1 - sparkPan));
+        }
+      }
 
       let padAmp = 0.28;
-      if (t < 7.5) {
-        padAmp = 0.12 + 0.14 * (t / 7.5);
-      } else if (t < 20.0) {
-        padAmp = 0.26 + 0.18 * ((t - 7.5) / 12.5);
-      } else if (t < 34.0) {
-        padAmp = 0.35 + 0.30 * ((t - 20) / 14);
-      } else if (t < 55.0) {
+      if (part === 0) {
+        padAmp = 0.12 + 0.20 * Math.min(1.0, (rawT % (barSec * 16)) / (barSec * 16));
+      } else if (part === 1) {
+        padAmp = 0.35 + 0.15 * Math.min(1.0, (rawT % (barSec * 16)) / (barSec * 16));
+      } else if (part === 2) {
         padAmp = 0.42;
-      } else if (t < 61.0) {
-        const u = (t - 55) / 6.0;
-        padAmp = 0.42 * (1 - u) + 0.25 * u + 0.16 * Math.sin(u * Math.PI);
-      } else if (t < 82.0) {
-        padAmp = 0.25;
-      } else if (t < 108.0) {
-        padAmp = 0.85;
-      } else if (t < 124.0) {
-        padAmp = 0.65;
-      } else if (t < 159.512) {
-        padAmp = 0.78;
+      } else if (part === 3) {
+        padAmp = 0.45;
+      } else if (part === 4) {
+        padAmp = 0.30;
+      } else if (part === 5) {
+        padAmp = 0.85; // ambient wash
+      } else if (part === 6) {
+        padAmp = 0.78; // climax
       } else {
-        padAmp = 0.75 * Math.max(0, 1 - (t - 159.512) / 20.0);
+        const outProg = Math.min(1.0, (rawT % (barSec * 16)) / (barSec * 16));
+        padAmp = 0.75 * Math.max(0, 1.0 - outProg);
       }
 
       const wow = 1.0 + 0.0018 * Math.sin(2 * Math.PI * 0.45 * rawT);
@@ -293,29 +341,37 @@ export class ProceduralScore {
       }
       addSample('pads', i, padL * padAmp, padR * padAmp);
 
-      if (!inDropSilence && part !== 4) {
+      if (!inDropSilence && part !== 5) {
         let bassMidi = chord[0] - 12;
         const step = Math.floor(rawT / stepSec);
         const s16 = step % 16;
-        const bar = Math.floor(step / 16);
+        const curBar = Math.floor(step / 16);
 
         if (part === 0) {
-          if (t < 7.3) {
-            bassMidi = chord[0] - 24;
-          } else if (t < 14.6) {
-            if (s16 === 8) bassMidi += 12;
-          } else {
-            if (s16 === 3 || s16 === 7 || s16 === 14) bassMidi += 12;
-          }
+          if (s16 === 8) bassMidi += 12;
+        } else if (part === 2) {
+          if (s16 === 3 || s16 === 7 || s16 === 11 || s16 === 14) bassMidi += 12;
         } else if (part === 3) {
           if (s16 === 3 || s16 === 7 || s16 === 14) bassMidi += 12;
           else if (s16 === 11) bassMidi += 7;
+        } else if (part === 4) {
+          if (s16 === 7 || s16 === 14) bassMidi += 12;
         } else if (part === 6 && (s16 % 4 === 2)) {
           bassMidi += 12;
         }
 
         let bassFreq = this.mtof(bassMidi);
-        if (t >= 57.5 && t < 58.54) {
+
+        // Sub Dive Bomb on Chapter 3 (drop) and Chapter 6 (climax) downbeats
+        if (curChapter) {
+          const barInCh = (curBar + 1) - curChapter.startBar;
+          if (barInCh === 0 && (part === 3 || part === 6)) {
+            const diveFrac = (rawT % barSec) / (barSec * 0.5);
+            if (diveFrac < 1.0) {
+              bassFreq *= (1.0 - 0.42 * Math.sin(diveFrac * Math.PI * 0.5));
+            }
+          }
+        } else if (t >= 57.5 && t < 58.54) {
           const dive = (t - 57.5) / 1.04;
           bassFreq *= (1.0 - 0.32 * Math.sin(dive * Math.PI));
         }
@@ -329,31 +385,27 @@ export class ProceduralScore {
         let cutoff = 0.06;
 
         if (part === 0) {
-          if (t < 7.3) {
-            const isPulse = (s16 === 0 || s16 === 8);
-            bassEnv = isPulse ? Math.exp(-stepPhase * 3.8) * 0.70 : 0.0;
-            cutoff = 0.042;
-          } else if (t < 14.6) {
-            bassEnv = (s16 === 0 || s16 === 8) ? Math.exp(-stepPhase * 3.5) * 0.55 : 0.0;
-            cutoff = 0.045;
-          } else {
-            bassEnv = Math.exp(-stepPhase * 3.2) * 0.70;
-            cutoff = 0.05 + 0.12 * Math.exp(-stepPhase * 6.0);
-          }
-        } else if (part === 1 || part === 5) {
-          const prog = part === 1 ? (t - 20) / 13 : (t - 108) / 15;
-          bassEnv = Math.exp(-stepPhase * 4.5) * (0.45 + 0.45 * prog);
-          cutoff = 0.04 + 0.25 * prog;
-        } else if (part === 2 || part === 6) {
+          bassEnv = (s16 === 0 || s16 === 8) ? Math.exp(-stepPhase * 3.5) * 0.65 : 0.0;
+          cutoff = 0.045;
+        } else if (part === 1) {
+          bassEnv = Math.exp(-stepPhase * 4.5) * 0.70;
+          cutoff = 0.05 + 0.15 * Math.exp(-stepPhase * 4.0);
+        } else if (part === 2) {
+          // Fast electro bass
+          bassEnv = Math.exp(-stepPhase * 3.8) * 0.85;
+          cutoff = 0.08 + 0.16 * Math.exp(-stepPhase * 6.0);
+        } else if (part === 3 || part === 6) {
+          // Wobble Bass
           const wobbleFreq = this.bpm / 30;
           const wobble = 0.5 + 0.5 * Math.sin(2 * Math.PI * wobbleFreq * rawT);
-          bassEnv = 0.85;
-          cutoff = 0.06 + 0.18 * wobble;
-        } else if (part === 3) {
-          bassEnv = 0.78;
-          cutoff = 0.04;
+          bassEnv = 0.88;
+          cutoff = 0.07 + 0.20 * wobble;
+        } else if (part === 4) {
+          // Deep Dub Sub
+          bassEnv = 0.82;
+          cutoff = 0.042;
         } else {
-          bassEnv = 0.75 * Math.max(0, 1 - (t - 159.512) / 18.0);
+          bassEnv = 0.75;
           cutoff = 0.04;
         }
 
@@ -366,46 +418,53 @@ export class ProceduralScore {
         addSample('bass', i, lpL * bassEnv * 0.44, lpR * bassEnv * 0.44);
       }
 
-      if (part === 0 && t >= 14.5 && t < 19.8) {
-        const p = (t - 14.5) / 5.3;
-        const rFreq = 110 * Math.pow(2, p * 3.0);
+      // DYNAMIC CHAPTER TRANSITION RISER SWELLS
+      if (inChapterRiser) {
+        const p = (chapterBarFrac - 0.35) / 0.65;
+        const rFreq = 140 * Math.pow(2, p * 3.4);
         riserPhase = (riserPhase + rFreq / sr) % 1.0;
-        const rSig = (Math.sin(2 * Math.PI * riserPhase) * 0.45 + pink[i % noiseLen] * 0.55) * p * p * 0.24;
-        addSample('glitch', i, rSig * 0.9, rSig * 1.1);
-      }
-      if (part === 1 && t >= 26.5 && t < 33.1) {
-        const p = (t - 26.5) / 6.6;
-        const rFreq = 220 * Math.pow(2, p * 2.2);
-        riserPhase = (riserPhase + rFreq / sr) % 1.0;
-        const rSig = (Math.sin(2 * Math.PI * riserPhase) * 0.35 + pink[i % noiseLen] * 0.35) * Math.pow(p, 2.5) * 0.16;
-        addSample('glitch', i, rSig * 0.9, rSig * 1.1);
-      }
-      if (part === 5 && t >= 112.0 && t < 123.1) {
-        const p = (t - 112) / 11.1;
-        const rFreq = 220 * Math.pow(2, p * 2.5);
-        riserPhase = (riserPhase + rFreq / sr) % 1.0;
-        const rSig = (Math.sin(2 * Math.PI * riserPhase) * 0.5 + pink[i % noiseLen] * 0.5) * p * p * 0.22;
-        addSample('glitch', i, rSig, rSig);
-      }
-      if (t >= 57.2 && t < 58.54) {
-        const u = (t - 57.2) / 1.34;
-        const shimmer = (white[i % noiseLen] * 0.35 + pink[i % noiseLen] * 0.65) * Math.pow(u, 2.8) * 0.22;
-        addSample('glitch', i, shimmer * 0.85, shimmer * 1.15);
-      }
-      if (t >= 158.5 && t < 159.512) {
-        const u = (t - 158.5) / 1.012;
-        const shimmer = (white[i % noiseLen] * 0.4 + pink[i % noiseLen] * 0.6) * Math.pow(u, 3.0) * 0.25;
-        addSample('glitch', i, shimmer * 1.1, shimmer * 0.9);
+        const rNoise = white[i % noiseLen] * 0.45 + pink[i % noiseLen] * 0.55;
+        const rSig = (Math.sin(2 * Math.PI * riserPhase) * 0.4 + rNoise * 0.6) * Math.pow(p, 2.2) * 0.35;
+        addSample('glitch', i, rSig * 0.88, rSig * 1.12);
+
+        // Pre-drop sharp static snap on the final 50ms
+        if (chapterBarFrac >= 0.95) {
+          const snapSig = (white[i % noiseLen] * 0.7 + Math.sin(2 * Math.PI * 3200 * rawT) * 0.3) * 0.35;
+          addSample('glitch', i, snapSig, snapSig);
+        }
+      } else if (!this.chapters) {
+        if (part === 0 && t >= 14.5 && t < 19.8) {
+          const p = (t - 14.5) / 5.3;
+          const rFreq = 110 * Math.pow(2, p * 3.0);
+          riserPhase = (riserPhase + rFreq / sr) % 1.0;
+          const rSig = (Math.sin(2 * Math.PI * riserPhase) * 0.45 + pink[i % noiseLen] * 0.55) * p * p * 0.24;
+          addSample('glitch', i, rSig * 0.9, rSig * 1.1);
+        }
+        if (part === 1 && t >= 26.5 && t < 33.1) {
+          const p = (t - 26.5) / 6.6;
+          const rFreq = 220 * Math.pow(2, p * 2.2);
+          riserPhase = (riserPhase + rFreq / sr) % 1.0;
+          const rSig = (Math.sin(2 * Math.PI * riserPhase) * 0.35 + pink[i % noiseLen] * 0.35) * Math.pow(p, 2.5) * 0.16;
+          addSample('glitch', i, rSig * 0.9, rSig * 1.1);
+        }
+        if (part === 5 && t >= 112.0 && t < 123.1) {
+          const p = (t - 112) / 11.1;
+          const rFreq = 220 * Math.pow(2, p * 2.5);
+          riserPhase = (riserPhase + rFreq / sr) % 1.0;
+          const rSig = (Math.sin(2 * Math.PI * riserPhase) * 0.5 + pink[i % noiseLen] * 0.5) * p * p * 0.22;
+          addSample('glitch', i, rSig, rSig);
+        }
       }
 
-      if ((t >= 34.0 && t < 60.5) || (t >= 124.0 && t < 164.5)) {
-        const isClimax = (t >= 124.0);
+      // LEAD SYNTHESIS (Hook A during Drop/Machine 3, Hook B during Climax/Machine 6)
+      const playLead = (part === 3 || part === 6 || (!this.chapters && ((t >= 34.0 && t < 60.5) || (t >= 124.0 && t < 164.5))));
+      if (playLead && !inDropSilence) {
+        const isClimax = (part === 6 || t >= 124.0);
         const mStep = Math.floor(rawT / (stepSec * 2));
         const hookA = [72, 75, 77, 80, 79, 75, 72, 68, 70, 72, 75, 77, 75, 72, 70, 67];
         const hookB = [77, 80, 84, 82, 80, 77, 75, 72, 75, 77, 80, 84, 87, 84, 80, 77];
         const mel = isClimax ? hookB : hookA;
         let targetMidi = mel[mStep % mel.length];
-        if (t >= 158.0) targetMidi = (t < 159.5) ? 80 : 81;
 
         const targetFreq = this.mtof(targetMidi);
         curLeadFreq += (targetFreq - curLeadFreq) * 0.0020;
@@ -413,16 +472,7 @@ export class ProceduralScore {
         const vib = 1.0 + 0.005 * Math.sin(2 * Math.PI * leadVib);
         leadPhase = (leadPhase + (curLeadFreq * vib) / sr) % 1.0;
 
-        let env = 1.0;
-        if (!isClimax) {
-          if (t < 34.5) env = (t - 34.0) / 0.5;
-          else if (t > 56.5) env = Math.max(0, (60.5 - t) / 4.0);
-        } else {
-          if (t < 124.5) env = (t - 124.0) / 0.5;
-          else if (t > 158.0) env = Math.pow(Math.max(0, (164.5 - t) / 6.5), 1.6);
-        }
-
-        const leadAmp = (isClimax ? 0.16 : 0.12) * env;
+        const leadAmp = (isClimax ? 0.17 : 0.13);
         const sig = (Math.sin(2 * Math.PI * leadPhase) * 0.65 + ((leadPhase * 2 - 1) * 0.35)) * leadAmp;
         addSample('lead', i, sig * 0.88, sig * 1.12);
       }
@@ -442,7 +492,18 @@ export class ProceduralScore {
       const s16 = step % 16;
       const bar = Math.floor(step / 16);
       const chord = chordAtTime(rawT0);
-      const inDropSilence = (t0 >= 33.1 && t0 < 34.0) || (t0 >= 123.1 && t0 < 124.0);
+      let inChapterDropSilence = false;
+      if (Array.isArray(this.chapters) && this.chapters.length) {
+        const curBar = Math.floor(rawT0 / barSec) + 1;
+        const ch = this.chapters.find(c => curBar >= (c.startBar || 1) && curBar <= (c.endBar || 9999));
+        if (ch && curBar === ch.endBar) {
+          const frac = (rawT0 % barSec) / barSec;
+          if (frac >= 0.72) inChapterDropSilence = true;
+        }
+      } else {
+        if ((t0 >= 33.1 && t0 < 34.0) || (t0 >= 123.1 && t0 < 124.0)) inChapterDropSilence = true;
+      }
+      const inDropSilence = inChapterDropSilence;
 
       let playRhodes = false;
       if (part === 0) {
@@ -478,25 +539,45 @@ export class ProceduralScore {
         }
       }
 
-      if ((t0 >= 58.54 && t0 < 84.0) && (s16 === 0 || s16 === 3 || s16 === 6 || s16 === 10 || s16 === 13)) {
+      // FM METALLIC BELL-MARIMBA (Active in Chapter 4 / Static Harvesting)
+      const playFmBell = (part === 4 || (t0 >= 58.54 && t0 < 84.0)) && (s16 === 0 || s16 === 3 || s16 === 6 || s16 === 10 || s16 === 13);
+      if (playFmBell && !inDropSilence) {
         const mMidi = chord[s16 % chord.length] + 12;
         const mFreq = this.mtof(mMidi);
-        const mDur = Math.floor(0.15 * sr);
-        let mFade = 1.0;
-        if (t0 < 60.5) mFade = (t0 - 58.54) / 2.0;
-        else if (t0 > 81.5) mFade = (84.0 - t0) / 2.5;
+        const mDur = Math.floor(0.18 * sr);
         let cP = 0, mP = 0;
         for (let j = 0; j < mDur && startIdx + j < totalSamples; j++) {
           const dt = j / sr;
           mP += (mFreq * 4.0) / sr;
           cP += (mFreq + Math.sin(2 * Math.PI * mP) * mFreq * Math.exp(-dt * 55) * 1.8) / sr;
-          const sig = Math.sin(2 * Math.PI * cP) * Math.exp(-dt * 22) * 0.24 * mFade;
+          const sig = Math.sin(2 * Math.PI * cP) * Math.exp(-dt * 22) * 0.25;
           addSample('melodic', startIdx + j, sig * (s16 % 2 === 0 ? 1.15 : 0.75), sig * (s16 % 2 === 0 ? 0.75 : 1.15));
         }
       }
 
-      if (part === 4 || t0 > 172.0 || inDropSilence) continue;
+      // TB-303 SCREAMING ACID RESONANT LINE (Active in Chapter 6 / Predicting Thunder)
+      if (part === 6 && !inDropSilence) {
+        const acidRiff = [41, 41, 53, 44, 41, 56, 41, 48, 41, 41, 53, 56, 58, 56, 53, 48];
+        const aMidi = acidRiff[s16];
+        const aFreq = this.mtof(aMidi);
+        const aDur = Math.floor(stepSec * 0.88 * sr);
+        let aPhase = 0;
+        let flt = 0;
+        const resCutoff = 0.08 + 0.35 * Math.exp(-(s16 % 4 === 0 ? 0.05 : 0.25) * 8.0);
+        for (let j = 0; j < aDur && startIdx + j < totalSamples; j++) {
+          const dt = j / sr;
+          aPhase = (aPhase + aFreq / sr) % 1.0;
+          const saw = aPhase * 2.0 - 1.0;
+          flt += resCutoff * (saw - flt);
+          const sig = flt * Math.exp(-dt * 12.0) * 0.22;
+          addSample('bass', startIdx + j, sig * 0.95, sig * 1.05);
+        }
+      }
 
+      if (part === 5 && (bar % 16) < 8) continue; // silence drums in first 8 bars of breakdown
+      if (t0 > 182.0 || inDropSilence) continue;
+
+      let drumAmp = 0.90;
       let isKick = false;
       let isSnare = false;
       let isGhost = false;
@@ -505,72 +586,60 @@ export class ProceduralScore {
       let isMicroClick = false;
 
       if (part === 0) {
-        if (t0 < 7.5) {
-          isKick = (s16 === 0 || s16 === 8);
-          isMicroClick = (s16 % 4 === 2);
-        } else if (t0 < 14.5) {
-          isKick = (s16 === 0 || s16 === 8);
-          isGhost = (s16 === 4 || s16 === 14);
-          isMicroClick = (s16 % 4 === 2);
-        } else if (t0 < 19.8) {
-          isKick = (s16 === 0 || s16 === 6 || s16 === 10);
-          isGhost = (s16 === 4 || s16 === 12);
-          isDrillRoll = (t0 >= 18.5 && (s16 === 14 || s16 === 15));
-        }
+        if (s16 === 0 || s16 === 8) isKick = true;
+        if (s16 % 4 === 2) isMicroClick = true;
+        if (bar >= 8 && (s16 === 4 || s16 === 12)) isGhost = true;
       } else if (part === 1) {
-        const prog = (t0 - 20) / 13;
-        isKick = (s16 === 0 || s16 === 10 || (prog > 0.55 && s16 === 6));
+        isKick = (s16 === 0 || s16 === 10);
         isSnare = (s16 === 4 || s16 === 12);
-        isGhost = (prog > 0.35 && (s16 === 7 || s16 === 14));
-        isReverseShuffle = (prog > 0.40 && (s16 === 3 || s16 === 11 || s16 === 15));
-        isDrillRoll = (prog > 0.75 && s16 === 15 && bar % 2 === 1);
+        isGhost = (s16 === 7 || s16 === 14);
+        isReverseShuffle = (s16 === 3 || s16 === 11 || s16 === 15);
       } else if (part === 2) {
-        const isNearTransition = (t0 >= 57.0 && t0 < 58.536);
-        if (isNearTransition) {
-          isKick = (s16 === 0 || s16 === 6 || s16 === 10);
-          isSnare = (s16 === 4 || s16 === 12);
-          isDrillRoll = (s16 === 12 || s16 === 14 || s16 === 15);
-          isReverseShuffle = (s16 === 9 || s16 === 13);
-        } else {
-          const fillBar = (bar % 4 === 3);
-          isKick = (s16 === 0 || s16 === 10 || (fillBar && s16 === 11));
-          isSnare = (s16 === 4 || s16 === 12 || (fillBar && s16 === 14));
-          isGhost = (s16 === 7 || s16 === 9 || s16 === 15);
-          isDrillRoll = (fillBar && (s16 === 13 || s16 === 15));
-        }
+        // Fast broken-beat electro & telegraph transmission (Ch 2: Sending Letters)
+        isKick = (s16 === 0 || s16 === 3 || s16 === 8 || s16 === 11);
+        isSnare = (s16 === 4 || s16 === 12);
+        isGhost = (s16 === 6 || s16 === 14);
+        isMicroClick = (s16 === 2 || s16 === 5 || s16 === 9 || s16 === 15);
+        isReverseShuffle = (s16 === 7 || s16 === 13);
+        isDrillRoll = (bar % 2 === 1 && (s16 === 14 || s16 === 15));
       } else if (part === 3) {
+        // Heavy Drop / Measuring Regret
+        const fillBar = (bar % 4 === 3);
+        isKick = (s16 === 0 || s16 === 6 || s16 === 10 || (fillBar && s16 === 11));
+        isSnare = (s16 === 4 || s16 === 12 || (fillBar && s16 === 14));
+        isGhost = (s16 === 7 || s16 === 9 || s16 === 15);
+        isDrillRoll = (fillBar && (s16 === 13 || s16 === 15));
+      } else if (part === 4) {
+        // Half-Time Dub / Static Harvesting
         isKick = (s16 === 0 || s16 === 7 || s16 === 14);
         isSnare = (s16 === 8);
         isGhost = (s16 === 11 || s16 === 15);
+        isMicroClick = (s16 % 4 === 2);
       } else if (part === 5) {
-        const prog = (t0 - 108) / 15;
-        isKick = (prog < 0.6) ? (s16 % 4 === 0) : (s16 % 2 === 0);
-        isSnare = (s16 === 4 || s16 === 12 || (prog > 0.7 && s16 === 8));
-        isReverseShuffle = (prog > 0.5 && (s16 === 3 || s16 === 11));
-        isDrillRoll = (prog > 0.72 && (s16 === 14 || s16 === 15));
-      } else if (part === 6) {
-        const isNearCoda = (t0 >= 158.0 && t0 < 159.512);
-        if (isNearCoda) {
-          isKick = (s16 === 0 || s16 === 6 || s16 === 10);
-          isSnare = (s16 === 4 || s16 === 12);
-          isDrillRoll = (s16 === 13 || s16 === 14 || s16 === 15);
-          isReverseShuffle = (s16 === 7 || s16 === 11);
-        } else {
-          const fillBar = (bar % 4 === 3);
-          isKick = (s16 === 0 || s16 === 3 || s16 === 10 || (fillBar && s16 === 11));
-          isSnare = (s16 === 4 || s16 === 12 || (fillBar && s16 === 14));
-          isGhost = (s16 === 7 || s16 === 9 || s16 === 15);
-          isDrillRoll = (fillBar && (s16 === 13 || s16 === 15));
+        // Ambient Breakdown & Golden Spiral Crescendo / Forgetting Names
+        const prog = (bar % 16) / 16;
+        if (prog >= 0.5) {
+          isKick = (prog > 0.75) ? (s16 % 2 === 0) : (s16 % 4 === 0);
+          isSnare = (prog > 0.65 && (s16 === 4 || s16 === 12));
+          isReverseShuffle = (s16 === 3 || s16 === 11);
+          isDrillRoll = (prog > 0.85 && (s16 === 14 || s16 === 15));
         }
+      } else if (part === 6) {
+        // Grand Climax / Predicting Thunder
+        const fillBar = (bar % 4 === 3);
+        isKick = (s16 % 4 === 0 || s16 === 10 || (fillBar && s16 === 11));
+        isSnare = (s16 === 4 || s16 === 12 || (fillBar && s16 === 14));
+        isGhost = (s16 === 7 || s16 === 9 || s16 === 15);
+        isDrillRoll = (fillBar && (s16 === 13 || s16 === 15));
       } else if (part === 7) {
-        if (t0 < 168.0) {
+        // Outro / Remembering the Sun
+        const prog = (bar % 16) / 16;
+        if (prog < 0.6) {
           isKick = (s16 === 0 || s16 === 10);
           isGhost = (s16 === 4 || s16 === 12);
-          isReverseShuffle = (s16 === 7 || s16 === 15);
+          isMicroClick = (s16 % 4 === 2);
         }
       }
-
-      let drumAmp = 0.90;
       if (t0 >= 159.512) {
         drumAmp = 0.90 * Math.max(0, 1.0 - (t0 - 159.512) / 10.0);
       }

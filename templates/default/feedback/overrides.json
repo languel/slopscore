@@ -1,8 +1,82 @@
 {
   "shaders": {},
   "camera": {},
-  "chapters": {},
+  "chapters": {
+    "ch-0": {
+      "startBar": 1,
+      "endBar": 16,
+      "name": "I. Machine for Making Choices",
+      "particleRig": "gears",
+      "mood": "intro",
+      "shaders": {},
+      "camera": {}
+    },
+    "ch-1": {
+      "startBar": 17,
+      "endBar": 32,
+      "name": "II. Machine for Making Sense",
+      "particleRig": "crystals",
+      "mood": "verse",
+      "shaders": {},
+      "camera": {}
+    },
+    "ch-2": {
+      "startBar": 33,
+      "endBar": 48,
+      "name": "III. Machine for Sending Letters",
+      "particleRig": "helix",
+      "mood": "buildup",
+      "shaders": {},
+      "camera": {}
+    },
+    "ch-3": {
+      "startBar": 49,
+      "endBar": 64,
+      "name": "IV. Machine for Measuring Regret",
+      "particleRig": "spiral",
+      "mood": "drop",
+      "shaders": {},
+      "camera": {}
+    },
+    "ch-4": {
+      "startBar": 65,
+      "endBar": 80,
+      "name": "V. Machine for Harvesting Static",
+      "particleRig": "sparkRings",
+      "mood": "dub",
+      "shaders": {},
+      "camera": {}
+    },
+    "ch-5": {
+      "startBar": 81,
+      "endBar": 96,
+      "name": "VI. Machine for Forgetting Names",
+      "particleRig": "voxels",
+      "mood": "breakdown",
+      "shaders": {},
+      "camera": {}
+    },
+    "ch-6": {
+      "startBar": 97,
+      "endBar": 112,
+      "name": "VII. Machine for Predicting Thunder",
+      "particleRig": "butterflies",
+      "mood": "climax",
+      "shaders": {},
+      "camera": {}
+    },
+    "ch-7": {
+      "startBar": 113,
+      "endBar": 128,
+      "name": "VIII. Machine for Remembering the Sun",
+      "particleRig": "relief",
+      "mood": "outro",
+      "shaders": {},
+      "camera": {}
+    }
+  },
   "audio": {
-    "bpm": 166
+    "bpm": 166,
+    "durationSeconds": 185.06
   }
 }
