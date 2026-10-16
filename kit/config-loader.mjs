@@ -67,18 +67,24 @@ export async function loadProject(dir = process.cwd(), { strict = false } = {}) 
     const mod = await import(`${pathToFileURL(configFile).href}?t=${fs.statSync(configFile).mtimeMs}`);
     raw = mod.default || mod.config || mod;
   }
-  const project = normalizeProject(raw);
+  const feedbackDir = path.join(root, 'feedback');
+  const overrides = readJson(path.join(feedbackDir, 'overrides.json'), null);
+
+  const rawMerged = {
+    ...raw,
+    audio: {
+      ...(raw.audio || {}),
+      ...(overrides?.audio || {})
+    },
+    renderer: overrides?.renderer || raw.renderer,
+    chapters: Array.isArray(raw.chapters) ? raw.chapters.map((ch, idx) => {
+      const ovCh = overrides?.chapters?.[ch.id] || overrides?.chapters?.[idx];
+      return ovCh ? { ...ch, ...ovCh } : ch;
+    }) : raw.chapters
+  };
+
+  const project = normalizeProject(rawMerged);
   const paths = projectPaths(root, project);
-  // Apply feedback overrides (e.g. tempo/bpm, shaders, camera) if present on disk
-  const overrides = readJson(path.join(paths.feedback, 'overrides.json'), null);
-  if (overrides) {
-    if (overrides.audio?.bpm) {
-      project.audio.bpm = Number(overrides.audio.bpm);
-    }
-    if (overrides.renderer) {
-      project.renderer = overrides.renderer;
-    }
-  }
   const validation = validateProject(project);
   if (strict && !validation.ok) {
     throw new Error(`Invalid ${path.basename(configFile)}:\n` + validation.errors.map(e => `  - ${e.path}: ${e.message}`).join('\n'));

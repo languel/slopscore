@@ -1381,6 +1381,11 @@
                   <span class="bpm-label">BPM</span>
                 </div>
 
+                <div class="bpm-cluster" title="Piece Duration (Seconds)">
+                  <input type="number" id="inp-duration-sec" value="60" min="5" max="600" step="0.1" style="width:50px;">
+                  <span class="bpm-label">SEC</span>
+                </div>
+
                 <select id="sel-musical-snap" class="form-control" style="padding: 2px 6px; font-size:11px;" title="Musical Snapping Quantization">
                   <option value="bar" selected>Snap: Bar</option>
                   <option value="half">Snap: 1/2 Bar</option>
@@ -1561,11 +1566,17 @@
         <div id="sheet-side-resizer" class="side-resizer" title="Drag to resize chapter plan"></div>
 
         <div class="plan-table-pane">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <div style="font-size:13px; font-weight:700; color:var(--accent-gold);">NARRATIVE CHAPTER PLAN</div>
-            <span id="sheet-chapters-summary" style="font-size:11px; color:var(--text-dim);"></span>
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <div>
+              <div style="font-size:13px; font-weight:700; color:var(--accent-gold);">NARRATIVE CHAPTER PLAN</div>
+              <span id="sheet-chapters-summary" style="font-size:11px; color:var(--text-dim);"></span>
+            </div>
+            <div style="display:flex; gap:6px; align-items:center;">
+              <button id="btn-snap-dur-to-chapters" class="btn btn-sm btn-gold" title="Lock project duration to chapters' bar length at current BPM">⚡ Fit Duration to Bars</button>
+              <button id="btn-autofit-chapters-to-dur" class="btn btn-sm" title="Auto-distribute chapter bar counts to fill full project duration evenly">⚡ Auto-Fit Bars to Duration</button>
+            </div>
           </div>
-          <div id="chapters-list" style="display:flex; flex-direction:column; gap:8px;"></div>
+          <div id="chapters-list" style="display:flex; flex-direction:column; gap:8px; margin-top:8px;"></div>
         </div>
       </div>
     </div>
@@ -2113,12 +2124,22 @@
         timeSignature: p.audio?.timeSignature || [4, 4],
         duration: state.duration
       });
+
+      if (Array.isArray(p.chapters)) {
+        p.chapters.forEach(ch => {
+          if (ch.startBar != null) ch.start = state.clock.timeAtBar(ch.startBar);
+          if (ch.endBar != null) ch.end = state.clock.timeAtBar(ch.endBar + 1);
+        });
+      }
+
       state.timeline = createTimeline(p, {
         features: { frames: state.audioFeatures, fps: 15 },
         clips: state.clips,
         bank: state.projectData?.bank || null,
         overrides: state.overrides
       });
+      setupTimeline();
+      if (typeof renderChaptersPlan === 'function') renderChaptersPlan();
     }
 
     function secondsToMusical(secs, bpm = state.bpm) {
@@ -2720,11 +2741,35 @@
           await fetch('/api/overrides', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ audio: { bpm: state.bpm } })
+            body: JSON.stringify({ audio: { bpm: state.bpm, durationSeconds: state.duration } })
           });
           showNotification(`Tempo set to ${state.bpm} BPM (persisted to feedback/overrides.json)`);
         } catch { /* ignore */ }
       });
+
+      const inpDurationSec = document.getElementById('inp-duration-sec');
+      if (inpDurationSec) {
+        inpDurationSec.value = state.duration;
+        inpDurationSec.addEventListener('change', async (e) => {
+          const val = Math.max(5, Math.min(600, parseFloat(e.target.value) || 60));
+          state.duration = val;
+          state.project.audio.durationSeconds = val;
+          rebuildClockAndTimeline();
+          drawTimelineWaveform();
+          drawAudioWaveform();
+          drawTimelineMusicalGrid();
+          updateTransportReadout(state.currentTime);
+
+          try {
+            await fetch('/api/overrides', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ audio: { durationSeconds: state.duration, bpm: state.bpm } })
+            });
+            showNotification(`Duration set to ${state.duration}s (persisted to feedback/overrides.json)`);
+          } catch { /* ignore */ }
+        });
+      }
 
       document.getElementById('sel-musical-snap').addEventListener('change', (e) => {
         state.musicalSnap = e.target.value;
@@ -3028,9 +3073,76 @@
         grid.appendChild(cell);
       });
 
-      const chapters = state.project.chapters || [];
-      document.getElementById('sheet-chapters-summary').textContent = `${state.duration}s Total (${chapters.length} Chapters)`;
+      renderChaptersPlan();
+
+      const btnSnapDur = document.getElementById('btn-snap-dur-to-chapters');
+      if (btnSnapDur && !btnSnapDur._bound) {
+        btnSnapDur._bound = true;
+        btnSnapDur.addEventListener('click', async () => {
+          const chapters = state.project.chapters || [];
+          if (!chapters.length) return;
+          const maxBar = Math.max(...chapters.map(c => c.endBar || 1));
+          const newDur = +(state.clock.timeAtBar(maxBar + 1)).toFixed(2);
+          state.duration = newDur;
+          state.project.audio.durationSeconds = newDur;
+          const inpDur = document.getElementById('inp-duration-sec');
+          if (inpDur) inpDur.value = newDur;
+          rebuildClockAndTimeline();
+          drawTimelineWaveform();
+          drawAudioWaveform();
+          updateTransportReadout(state.currentTime);
+          try {
+            await fetch('/api/overrides', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ audio: { durationSeconds: newDur, bpm: state.bpm } })
+            });
+            showNotification(`Duration snapped to ${maxBar} bars (${newDur}s @ ${state.bpm} BPM)`);
+          } catch {}
+        });
+      }
+
+      const btnAutofit = document.getElementById('btn-autofit-chapters-to-dur');
+      if (btnAutofit && !btnAutofit._bound) {
+        btnAutofit._bound = true;
+        btnAutofit.addEventListener('click', async () => {
+          const chapters = state.project.chapters || [];
+          if (!chapters.length) return;
+          const totalBars = Math.max(1, Math.floor(state.clock.totalBars));
+          const count = chapters.length;
+          const barsPerChapter = Math.floor(totalBars / count);
+          let curBar = 1;
+          state.overrides.chapters = state.overrides.chapters || {};
+          chapters.forEach((ch, i) => {
+            ch.startBar = curBar;
+            const isLast = (i === count - 1);
+            ch.endBar = isLast ? totalBars : (curBar + barsPerChapter - 1);
+            curBar = ch.endBar + 1;
+            state.overrides.chapters[ch.id] = {
+              ...(state.overrides.chapters[ch.id] || {}),
+              startBar: ch.startBar,
+              endBar: ch.endBar
+            };
+          });
+          rebuildClockAndTimeline();
+          try {
+            await fetch('/api/overrides', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ chapters: state.overrides.chapters })
+            });
+            showNotification(`Auto-fitted ${count} chapters across ${totalBars} bars (${state.duration}s @ ${state.bpm} BPM)`);
+          } catch {}
+        });
+      }
+    }
+
+    function renderChaptersPlan() {
       const chaptersList = document.getElementById('chapters-list');
+      if (!chaptersList) return;
+      const chapters = state.project.chapters || [];
+      const summaryEl = document.getElementById('sheet-chapters-summary');
+      if (summaryEl) summaryEl.textContent = `${state.duration}s Total (${chapters.length} Chapters • ${Math.round(state.clock.totalBars)} Bars)`;
       chaptersList.innerHTML = '';
 
       chapters.forEach(ch => {
@@ -3041,9 +3153,12 @@
         card.innerHTML = `
           <div class="chapter-card-top">
             <span class="chapter-card-title">Chapter ${ch.index}: ${escapeHtml(ch.name)}</span>
-            <div style="display:flex; gap:4px; align-items:center;">
-              <span class="note-time-badge" style="color:var(--accent-teal);">Bar ${ch.startBar}–${ch.endBar}</span>
-              <span class="note-time-badge" style="color:var(--text-muted);">${ch.start.toFixed(1)}s–${ch.end.toFixed(1)}s</span>
+            <div style="display:flex; gap:3px; align-items:center;">
+              <span style="font-size:10px; color:var(--text-secondary);">Bar</span>
+              <input type="number" class="form-control ch-bar-inp" data-ch-idx="${ch.index}" data-field="startBar" value="${ch.startBar}" min="1" max="999" style="width:44px; padding:1px 4px; font-size:11px; text-align:center;">
+              <span style="font-size:10px; color:var(--text-secondary);">–</span>
+              <input type="number" class="form-control ch-bar-inp" data-ch-idx="${ch.index}" data-field="endBar" value="${ch.endBar}" min="1" max="999" style="width:44px; padding:1px 4px; font-size:11px; text-align:center;">
+              <span class="note-time-badge" style="color:var(--text-muted); font-size:10.5px;">${ch.start.toFixed(1)}s–${ch.end.toFixed(1)}s</span>
             </div>
           </div>
           <div class="chapter-card-meta">Rig: <code>${escapeHtml(ch.particleRig)}</code> • Clip: <code>${escapeHtml(activeClipId)}</code></div>
@@ -3059,6 +3174,29 @@
           </div>
         `;
         chaptersList.appendChild(card);
+      });
+
+      chaptersList.querySelectorAll('.ch-bar-inp').forEach(inp => {
+        inp.addEventListener('change', async (e) => {
+          const idx = parseInt(inp.getAttribute('data-ch-idx'), 10);
+          const field = inp.getAttribute('data-field');
+          const val = Math.max(1, parseInt(e.target.value, 10) || 1);
+          const ch = state.project.chapters[idx];
+          if (ch) {
+            ch[field] = val;
+            state.overrides.chapters = state.overrides.chapters || {};
+            state.overrides.chapters[ch.id] = state.overrides.chapters[ch.id] || {};
+            state.overrides.chapters[ch.id][field] = val;
+            rebuildClockAndTimeline();
+            try {
+              await fetch('/api/overrides', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ chapters: state.overrides.chapters })
+              });
+            } catch {}
+          }
+        });
       });
 
       chaptersList.querySelectorAll('[data-jump-ch]').forEach(btn => {
