@@ -1307,7 +1307,7 @@
       <button id="btn-sync-disk" class="btn btn-icon-only" title="Sync Annotations to Disk">
         <svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>
       </button>
-      <button id="btn-toggle-assistant" class="btn btn-icon-only btn-teal" title="Toggle Genereti Studio Assistant Drawer">
+      <button id="btn-toggle-assistant" class="btn btn-icon-only" title="Toggle Genereti Studio Assistant Drawer">
         <svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" /></svg>
       </button>
       <button id="theme-btn" class="btn btn-icon-only" title="Toggle Dark / Light Theme">
@@ -2603,9 +2603,103 @@
         else window.slopscore.studio.play();
       });
 
+      // Always keep video muted so masterAudio is the single authoritative source of sound
+      if (video) video.muted = true;
+      if (masterAudio) {
+        masterAudio.muted = state.masterAudioMuted;
+        masterAudio.volume = state.masterAudioVolume;
+      }
+
+      // Master Audio Preview Controls (Mute / Volume / Stem selector)
+      const btnMute = document.getElementById('btn-master-audio-mute');
+      if (btnMute) {
+        btnMute.addEventListener('click', () => {
+          state.masterAudioMuted = !state.masterAudioMuted;
+          if (masterAudio) masterAudio.muted = state.masterAudioMuted;
+          btnMute.classList.toggle('active', state.masterAudioMuted);
+          btnMute.title = state.masterAudioMuted ? 'Unmute Audio Preview (M)' : 'Mute Audio Preview (M)';
+        });
+      }
+
+      const rngVol = document.getElementById('rng-master-audio-vol');
+      if (rngVol) {
+        rngVol.value = state.masterAudioVolume;
+        rngVol.addEventListener('input', (e) => {
+          const vol = Math.max(0, Math.min(1, parseFloat(e.target.value) || 0));
+          state.masterAudioVolume = vol;
+          if (masterAudio) masterAudio.volume = vol;
+        });
+      }
+
+      const selStem = document.getElementById('sel-master-audio-stem');
+      if (selStem) {
+        selStem.addEventListener('change', (e) => {
+          const stemId = e.target.value;
+          state.masterAudioStem = stemId;
+          const s = state.stems.find(x => x.id === stemId);
+          if (s && masterAudio) {
+            const curTime = masterAudio.currentTime;
+            const wasPlaying = !masterAudio.paused;
+            masterAudio.src = `${s.file}?t=${Date.now()}`;
+            masterAudio.load();
+            masterAudio.currentTime = curTime;
+            if (wasPlaying) masterAudio.play().catch(() => {});
+          }
+        });
+      }
+
+      const onTimeTick = (t) => {
+        if (state.isLoopingRange && state.inPoint !== null && state.outPoint !== null) {
+          const lo = Math.min(state.inPoint, state.outPoint);
+          const hi = Math.max(state.inPoint, state.outPoint);
+          if (t >= hi) {
+            seekTransport(lo);
+            return;
+          }
+        } else if (t >= state.duration) {
+          seekTransport(0);
+          return;
+        }
+        updateTransportReadout(t);
+      };
+
       video.addEventListener('timeupdate', () => {
         if (state.previewMode === 'video') {
-          updateTransportReadout(video.currentTime);
+          onTimeTick(video.currentTime);
+        }
+      });
+
+      if (masterAudio) {
+        masterAudio.addEventListener('timeupdate', () => {
+          if (state.playing && (state.previewMode === 'live' || video.paused)) {
+            onTimeTick(masterAudio.currentTime);
+          }
+        });
+      }
+
+      // Keyboard shortcuts: Space (Play/Pause), M (Mute), J/L (Step frame), I/O (Mark in/out)
+      window.addEventListener('keydown', (e) => {
+        const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
+        if (tag === 'input' || tag === 'textarea' || tag === 'select' || e.target?.isContentEditable) return;
+        if (e.code === 'Space') {
+          e.preventDefault();
+          if (state.playing) window.slopscore.studio.pause();
+          else window.slopscore.studio.play();
+        } else if (e.key === 'm' || e.key === 'M') {
+          e.preventDefault();
+          btnMute?.click();
+        } else if (e.key === 'j' || e.key === 'J') {
+          e.preventDefault();
+          seekTransport(state.currentTime - 1 / (state.project.fps || 30));
+        } else if (e.key === 'l' || e.key === 'L') {
+          e.preventDefault();
+          seekTransport(state.currentTime + 1 / (state.project.fps || 30));
+        } else if (e.key === 'i' || e.key === 'I') {
+          e.preventDefault();
+          document.getElementById('btn-mark-in')?.click();
+        } else if (e.key === 'o' || e.key === 'O') {
+          e.preventDefault();
+          document.getElementById('btn-mark-out')?.click();
         }
       });
 
@@ -3563,13 +3657,20 @@
 
               // Refresh artifact media cache
               const cacheBust = Date.now();
-              if (data.task?.artifact === 'sheet' || data.task?.action === 'sheet') {
-                const sheetImg = document.getElementById('sheet-img');
-                if (sheetImg) sheetImg.src = `/out/sheet.jpg?t=${cacheBust}`;
-                showNotification('Contact sheet updated');
-              } else if (data.task?.artifact === 'audio' || data.task?.action === 'audio') {
+              const reloadAudioAndFeatures = () => {
                 const audio = document.getElementById('master-audio-preview');
                 if (audio) { audio.src = `/out/score.wav?t=${cacheBust}`; audio.load(); }
+                fetch(`/api/stems?t=${cacheBust}`).then(r => r.json()).then(dataStems => {
+                  if (dataStems && dataStems.stems) {
+                    state.stems = dataStems.stems;
+                    state.stems.forEach(stem => {
+                      if (state.stemAudios[stem.id]) {
+                        state.stemAudios[stem.id].src = `${stem.file}?t=${cacheBust}`;
+                        state.stemAudios[stem.id].load();
+                      }
+                    });
+                  }
+                }).catch(() => {});
                 fetch(`/api/features?t=${cacheBust}`).then(r => r.json()).then(featData => {
                   if (featData && Array.isArray(featData.frames)) {
                     state.audioFeatures = featData.frames;
@@ -3578,8 +3679,30 @@
                   drawAudioWaveform();
                   drawAudioFeatures();
                 }).catch(() => {});
+              };
+
+              if (data.task?.artifact === 'sheet' || data.task?.action === 'sheet') {
+                const sheetImg = document.getElementById('sheet-img');
+                if (sheetImg) sheetImg.src = `/out/sheet.jpg?t=${cacheBust}`;
+                showNotification('Contact sheet updated');
+              } else if (data.task?.artifact === 'audio' || data.task?.action === 'audio') {
+                reloadAudioAndFeatures();
                 showNotification(`Audio & features re-synthesized @ ${state.bpm} BPM`);
-              } else if (data.task?.artifact === 'video' || data.task?.action === 'video' || data.task?.artifact === 'preview' || data.task?.action === 'preview') {
+              } else if (data.task?.artifact === 'preview' || data.task?.action === 'preview') {
+                const vid = document.getElementById('master-video');
+                if (vid) {
+                  const curTime = vid.currentTime;
+                  const wasPaused = vid.paused;
+                  vid.src = `/out/preview.mp4?t=${cacheBust}`;
+                  vid.load();
+                  vid.onloadedmetadata = () => {
+                    vid.currentTime = Math.min(curTime, vid.duration || 60);
+                    if (!wasPaused) vid.play().catch(() => {});
+                  };
+                }
+                reloadAudioAndFeatures();
+                showNotification('Preview video updated');
+              } else if (data.task?.artifact === 'video' || data.task?.action === 'video' || data.task?.action === 'all') {
                 const vid = document.getElementById('master-video');
                 if (vid) {
                   const curTime = vid.currentTime;
@@ -3591,6 +3714,7 @@
                     if (!wasPaused) vid.play().catch(() => {});
                   };
                 }
+                reloadAudioAndFeatures();
                 showNotification('Video render updated');
               }
             }
@@ -3642,8 +3766,25 @@
 
         async play() {
           state.playing = true;
+          const btnPlay = document.getElementById('btn-play');
+          if (btnPlay) {
+            btnPlay.innerHTML = '<svg class="icon pause-icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25v13.5m-7.5-13.5v13.5" /></svg>';
+            btnPlay.title = 'Pause (Space)';
+          }
+          if (masterAudio) {
+            masterAudio.muted = state.masterAudioMuted;
+            masterAudio.volume = state.masterAudioVolume;
+            try {
+              masterAudio.currentTime = state.currentTime;
+              await masterAudio.play();
+            } catch { /* ignore */ }
+          }
           if (state.previewMode === 'video') {
-            try { await video.play(); } catch { /* ignore */ }
+            try {
+              video.muted = true;
+              video.currentTime = state.currentTime;
+              await video.play();
+            } catch { /* ignore */ }
           } else {
             const startWall = performance.now();
             const startT = state.currentTime;
@@ -3661,9 +3802,15 @@
 
         async pause() {
           state.playing = false;
+          const btnPlay = document.getElementById('btn-play');
+          if (btnPlay) {
+            btnPlay.innerHTML = '<svg class="icon play-icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z"/></svg>';
+            btnPlay.title = 'Play (Space)';
+          }
           if (state.liveRaf) cancelAnimationFrame(state.liveRaf);
           try { video.pause(); } catch { /* ignore */ }
           if (masterAudio) { try { masterAudio.pause(); } catch { /* ignore */ } }
+          Object.values(state.stemAudios).forEach(a => { try { a.pause(); } catch {} });
           return this.getState();
         },
 
@@ -3911,10 +4058,23 @@
 
         async runCommand({ action, range, customCmd } = {}) {
           document.getElementById('build-terminal-drawer').classList.add('open');
+          const bpmInp = document.getElementById('inp-tempo-bpm');
+          if (bpmInp && bpmInp.value) {
+            const currentBpm = parseFloat(bpmInp.value) || state.bpm;
+            state.bpm = currentBpm;
+            state.project.audio.bpm = currentBpm;
+            try {
+              await fetch('/api/overrides', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ audio: { bpm: currentBpm } })
+              });
+            } catch { /* ignore */ }
+          }
           const res = await fetch('/api/run', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action, range, customCmd })
+            body: JSON.stringify({ action, range, customCmd, bpm: state.bpm })
           });
           return await res.json();
         },
