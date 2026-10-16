@@ -1572,8 +1572,10 @@
               <span id="sheet-chapters-summary" style="font-size:11px; color:var(--text-dim);"></span>
             </div>
             <div style="display:flex; gap:6px; align-items:center;">
+              <button id="btn-add-chapter" class="btn btn-sm btn-teal" title="Add a new chapter to the narrative sequence">+ Chapter</button>
               <button id="btn-snap-dur-to-chapters" class="btn btn-sm btn-gold" title="Lock project duration to chapters' bar length at current BPM">⚡ Fit Duration to Bars</button>
-              <button id="btn-autofit-chapters-to-dur" class="btn btn-sm" title="Auto-distribute chapter bar counts to fill full project duration evenly">⚡ Auto-Fit Bars to Duration</button>
+              <button id="btn-autofit-chapters-to-dur" class="btn btn-sm" title="Auto-distribute chapter bar counts to fill full project duration evenly">⚡ Auto-Fit Bars</button>
+              <button id="btn-export-chapters-spec" class="btn btn-sm" title="Sync chapter breakdown to project-spec.md">📄 Sync to Spec</button>
             </div>
           </div>
           <div id="chapters-list" style="display:flex; flex-direction:column; gap:8px; margin-top:8px;"></div>
@@ -3075,6 +3077,50 @@
 
       renderChaptersPlan();
 
+      const btnAddCh = document.getElementById('btn-add-chapter');
+      if (btnAddCh && !btnAddCh._bound) {
+        btnAddCh._bound = true;
+        btnAddCh.addEventListener('click', async () => {
+          const chapters = state.project.chapters || [];
+          const lastEndBar = chapters.length ? Math.max(...chapters.map(c => c.endBar || 1)) : 0;
+          const startBar = lastEndBar + 1;
+          const endBar = startBar + 7;
+          const newIdx = chapters.length;
+          const newId = `ch-${Date.now().toString(36)}`;
+          const rigs = ['gears', 'voxels', 'sparkRings', 'crystals', 'helix', 'spiral', 'butterflies', 'relief'];
+          const rig = rigs[newIdx % rigs.length];
+          const colors = ['#64b5a0', '#c07a78', '#dca568', '#8ba4b4', '#a292a3', '#89a894'];
+          const color = colors[newIdx % colors.length];
+          const moods = ['intro', 'verse', 'drop', 'dub', 'breakdown', 'crescendo', 'climax', 'outro'];
+          const mood = moods[newIdx % moods.length];
+          const newCh = {
+            index: newIdx,
+            id: newId,
+            name: `Chapter ${newIdx + 1}`,
+            startBar,
+            endBar,
+            start: state.clock.timeAtBar(startBar),
+            end: state.clock.timeAtBar(endBar + 1),
+            particleRig: rig,
+            mood,
+            color,
+            camera: { type: 'dollyPush', startDist: 16.0, endDist: 12.0 },
+            shaders: { crtScanlines: true, chromaticAberration: 0.18, lumaRelief: true }
+          };
+          chapters.push(newCh);
+          state.overrides.chaptersList = chapters.map(c => ({ ...c }));
+          rebuildClockAndTimeline();
+          try {
+            await fetch('/api/overrides', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ chaptersList: state.overrides.chaptersList })
+            });
+            showNotification(`Added Chapter ${newIdx + 1}: Bars ${startBar}–${endBar}`);
+          } catch {}
+        });
+      }
+
       const btnSnapDur = document.getElementById('btn-snap-dur-to-chapters');
       if (btnSnapDur && !btnSnapDur._bound) {
         btnSnapDur._bound = true;
@@ -3112,27 +3158,56 @@
           const count = chapters.length;
           const barsPerChapter = Math.floor(totalBars / count);
           let curBar = 1;
-          state.overrides.chapters = state.overrides.chapters || {};
           chapters.forEach((ch, i) => {
             ch.startBar = curBar;
             const isLast = (i === count - 1);
             ch.endBar = isLast ? totalBars : (curBar + barsPerChapter - 1);
             curBar = ch.endBar + 1;
-            state.overrides.chapters[ch.id] = {
-              ...(state.overrides.chapters[ch.id] || {}),
-              startBar: ch.startBar,
-              endBar: ch.endBar
-            };
           });
+          state.overrides.chaptersList = chapters.map(c => ({ ...c }));
           rebuildClockAndTimeline();
           try {
             await fetch('/api/overrides', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ chapters: state.overrides.chapters })
+              body: JSON.stringify({ chaptersList: state.overrides.chaptersList })
             });
             showNotification(`Auto-fitted ${count} chapters across ${totalBars} bars (${state.duration}s @ ${state.bpm} BPM)`);
           } catch {}
+        });
+      }
+
+      const btnSyncSpec = document.getElementById('btn-export-chapters-spec');
+      if (btnSyncSpec && !btnSyncSpec._bound) {
+        btnSyncSpec._bound = true;
+        btnSyncSpec.addEventListener('click', async () => {
+          const chapters = state.project.chapters || [];
+          const lines = [
+            `\n\n## 6. Live Chapter & Music Sequence (Synced @ ${state.bpm} BPM)`,
+            `| # | Name | Bars | Time (s) | Particle Rig | Audio Mood | Active Clip |`,
+            `|---|------|------|----------|--------------|------------|-------------|`
+          ];
+          chapters.forEach(ch => {
+            const ovrClip = state.overrides?.chapters?.[ch.id]?.clipLoopId;
+            const clip = ovrClip || ch.clipLoopId || ch.asset || 'none';
+            lines.push(`| ${ch.index + 1} | ${ch.name} | ${ch.startBar}–${ch.endBar} | ${ch.start.toFixed(1)}s–${ch.end.toFixed(1)}s | \`${ch.particleRig}\` | \`${ch.mood || 'verse'}\` | \`${clip}\` |`);
+          });
+          try {
+            const res = await fetch('/api/docs/spec');
+            const data = await res.json();
+            const curSpec = data.content || '';
+            const updated = curSpec.includes('## 6. Live Chapter')
+              ? curSpec.replace(/## 6\. Live Chapter[\s\S]*$/, lines.join('\n'))
+              : curSpec + lines.join('\n');
+            await fetch('/api/docs/spec', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ content: updated })
+            });
+            showNotification('Synced live chapter breakdown to project-spec.md');
+          } catch {
+            showNotification('Failed to sync to project-spec.md');
+          }
         });
       }
     }
@@ -3145,23 +3220,52 @@
       if (summaryEl) summaryEl.textContent = `${state.duration}s Total (${chapters.length} Chapters • ${Math.round(state.clock.totalBars)} Bars)`;
       chaptersList.innerHTML = '';
 
+      const rigs = ['gears', 'crystals', 'spiral', 'butterflies', 'voxels', 'sparkRings', 'helix', 'relief'];
+      const moods = [
+        ['intro', 'Intro (Sparse/Kick)'],
+        ['verse', 'Verse / Arp Buildup'],
+        ['drop', 'Drop / Level 1 (Wobble)'],
+        ['dub', 'Half-Time Dub Groove'],
+        ['breakdown', 'Ambient Breakdown'],
+        ['crescendo', 'Golden Crescendo'],
+        ['climax', 'Peak Climax'],
+        ['outro', 'Outro / Release']
+      ];
+
       chapters.forEach(ch => {
         const ovrClip = state.overrides?.chapters?.[ch.id]?.clipLoopId;
         const activeClipId = ovrClip || ch.clipLoopId || ch.asset || 'none';
         const card = document.createElement('div');
         card.className = 'chapter-card';
         card.innerHTML = `
-          <div class="chapter-card-top">
-            <span class="chapter-card-title">Chapter ${ch.index}: ${escapeHtml(ch.name)}</span>
+          <div class="chapter-card-top" style="align-items:center;">
+            <div style="display:flex; align-items:center; gap:6px; flex:1;">
+              <span style="font-weight:700; color:var(--accent-gold); font-size:11px;">CH ${ch.index}:</span>
+              <input type="text" class="form-control ch-name-inp" data-ch-idx="${ch.index}" value="${escapeHtml(ch.name)}" style="font-weight:700; font-size:11.5px; padding:2px 5px; flex:1; max-width:210px;" title="Click to rename chapter">
+            </div>
             <div style="display:flex; gap:3px; align-items:center;">
               <span style="font-size:10px; color:var(--text-secondary);">Bar</span>
-              <input type="number" class="form-control ch-bar-inp" data-ch-idx="${ch.index}" data-field="startBar" value="${ch.startBar}" min="1" max="999" style="width:44px; padding:1px 4px; font-size:11px; text-align:center;">
+              <input type="number" class="form-control ch-bar-inp" data-ch-idx="${ch.index}" data-field="startBar" value="${ch.startBar}" min="1" max="999" style="width:42px; padding:1px 3px; font-size:11px; text-align:center;">
               <span style="font-size:10px; color:var(--text-secondary);">–</span>
-              <input type="number" class="form-control ch-bar-inp" data-ch-idx="${ch.index}" data-field="endBar" value="${ch.endBar}" min="1" max="999" style="width:44px; padding:1px 4px; font-size:11px; text-align:center;">
-              <span class="note-time-badge" style="color:var(--text-muted); font-size:10.5px;">${ch.start.toFixed(1)}s–${ch.end.toFixed(1)}s</span>
+              <input type="number" class="form-control ch-bar-inp" data-ch-idx="${ch.index}" data-field="endBar" value="${ch.endBar}" min="1" max="999" style="width:42px; padding:1px 3px; font-size:11px; text-align:center;">
+              <span class="note-time-badge" style="color:var(--text-muted); font-size:10px;">${ch.start.toFixed(1)}s–${ch.end.toFixed(1)}s</span>
+              <button class="btn btn-icon-only btn-delete-ch" data-ch-idx="${ch.index}" title="Delete Chapter" style="padding:1px 5px; font-size:11px; color:var(--accent-coral); margin-left:4px;">✕</button>
             </div>
           </div>
-          <div class="chapter-card-meta">Rig: <code>${escapeHtml(ch.particleRig)}</code> • Clip: <code>${escapeHtml(activeClipId)}</code></div>
+          <div class="chapter-card-meta" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:4px;">
+            <div style="display:flex; gap:4px; align-items:center;">
+              <span style="font-size:10.5px; color:var(--text-secondary);">Rig:</span>
+              <select class="form-control ch-rig-sel" data-ch-idx="${ch.index}" style="font-size:10.5px; padding:1px 4px;">
+                ${rigs.map(r => `<option value="${r}" ${r === ch.particleRig ? 'selected' : ''}>${r}</option>`).join('')}
+              </select>
+            </div>
+            <div style="display:flex; gap:4px; align-items:center;">
+              <span style="font-size:10.5px; color:var(--text-secondary);">Music:</span>
+              <select class="form-control ch-mood-sel" data-ch-idx="${ch.index}" style="font-size:10.5px; padding:1px 4px;">
+                ${moods.map(([k, lbl]) => `<option value="${k}" ${(ch.mood || '').toLowerCase() === k ? 'selected' : ''}>${lbl}</option>`).join('')}
+              </select>
+            </div>
+          </div>
           <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-top:4px;">
             <select class="form-control" data-bind-chapter="${ch.index}" style="font-size:10.5px; padding:2px 6px; max-width:190px;">
               <option value="">Bind Saved Clip…</option>
@@ -3176,6 +3280,96 @@
         chaptersList.appendChild(card);
       });
 
+      // Name change listener
+      chaptersList.querySelectorAll('.ch-name-inp').forEach(inp => {
+        inp.addEventListener('change', async (e) => {
+          const idx = parseInt(inp.getAttribute('data-ch-idx'), 10);
+          const val = e.target.value.trim() || `Chapter ${idx + 1}`;
+          const ch = state.project.chapters[idx];
+          if (ch) {
+            ch.name = val;
+            state.overrides.chaptersList = state.project.chapters.map(c => ({ ...c }));
+            rebuildClockAndTimeline();
+            try {
+              await fetch('/api/overrides', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ chaptersList: state.overrides.chaptersList })
+              });
+            } catch {}
+          }
+        });
+      });
+
+      // Rig selector listener
+      chaptersList.querySelectorAll('.ch-rig-sel').forEach(sel => {
+        sel.addEventListener('change', async (e) => {
+          const idx = parseInt(sel.getAttribute('data-ch-idx'), 10);
+          const val = e.target.value;
+          const ch = state.project.chapters[idx];
+          if (ch) {
+            ch.particleRig = val;
+            state.overrides.chaptersList = state.project.chapters.map(c => ({ ...c }));
+            rebuildClockAndTimeline();
+            try {
+              await fetch('/api/overrides', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ chaptersList: state.overrides.chaptersList })
+              });
+              showNotification(`Chapter ${idx + 1} rig set to ${val}`);
+            } catch {}
+          }
+        });
+      });
+
+      // Music mood listener
+      chaptersList.querySelectorAll('.ch-mood-sel').forEach(sel => {
+        sel.addEventListener('change', async (e) => {
+          const idx = parseInt(sel.getAttribute('data-ch-idx'), 10);
+          const val = e.target.value;
+          const ch = state.project.chapters[idx];
+          if (ch) {
+            ch.mood = val;
+            state.overrides.chaptersList = state.project.chapters.map(c => ({ ...c }));
+            rebuildClockAndTimeline();
+            try {
+              await fetch('/api/overrides', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ chaptersList: state.overrides.chaptersList })
+              });
+              showNotification(`Chapter ${idx + 1} music set to ${val}`);
+            } catch {}
+          }
+        });
+      });
+
+      // Delete chapter listener
+      chaptersList.querySelectorAll('.btn-delete-ch').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const idx = parseInt(btn.getAttribute('data-ch-idx'), 10);
+          if ((state.project.chapters || []).length <= 1) {
+            showNotification('Project must have at least one chapter');
+            return;
+          }
+          state.project.chapters.splice(idx, 1);
+          state.project.chapters.forEach((c, i) => { c.index = i; });
+          state.overrides.chaptersList = state.project.chapters.map(c => ({ ...c }));
+          rebuildClockAndTimeline();
+          try {
+            await fetch('/api/overrides', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ chaptersList: state.overrides.chaptersList })
+            });
+            showNotification('Chapter removed');
+          } catch {}
+        });
+      });
+
+      // Bar boundary inputs listener
       chaptersList.querySelectorAll('.ch-bar-inp').forEach(inp => {
         inp.addEventListener('change', async (e) => {
           const idx = parseInt(inp.getAttribute('data-ch-idx'), 10);
@@ -3184,15 +3378,13 @@
           const ch = state.project.chapters[idx];
           if (ch) {
             ch[field] = val;
-            state.overrides.chapters = state.overrides.chapters || {};
-            state.overrides.chapters[ch.id] = state.overrides.chapters[ch.id] || {};
-            state.overrides.chapters[ch.id][field] = val;
+            state.overrides.chaptersList = state.project.chapters.map(c => ({ ...c }));
             rebuildClockAndTimeline();
             try {
               await fetch('/api/overrides', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ chapters: state.overrides.chapters })
+                body: JSON.stringify({ chaptersList: state.overrides.chaptersList })
               });
             } catch {}
           }

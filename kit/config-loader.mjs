@@ -70,6 +70,16 @@ export async function loadProject(dir = process.cwd(), { strict = false } = {}) 
   const feedbackDir = path.join(root, 'feedback');
   const overrides = readJson(path.join(feedbackDir, 'overrides.json'), null);
 
+  let chaptersMerged = raw.chapters;
+  if (Array.isArray(overrides?.chaptersList)) {
+    chaptersMerged = overrides.chaptersList;
+  } else if (Array.isArray(raw.chapters)) {
+    chaptersMerged = raw.chapters.map((ch, idx) => {
+      const ovCh = overrides?.chapters?.[ch.id] || overrides?.chapters?.[idx];
+      return ovCh ? { ...ch, ...ovCh } : ch;
+    });
+  }
+
   const rawMerged = {
     ...raw,
     audio: {
@@ -77,10 +87,7 @@ export async function loadProject(dir = process.cwd(), { strict = false } = {}) 
       ...(overrides?.audio || {})
     },
     renderer: overrides?.renderer || raw.renderer,
-    chapters: Array.isArray(raw.chapters) ? raw.chapters.map((ch, idx) => {
-      const ovCh = overrides?.chapters?.[ch.id] || overrides?.chapters?.[idx];
-      return ovCh ? { ...ch, ...ovCh } : ch;
-    }) : raw.chapters
+    chapters: chaptersMerged
   };
 
   const project = normalizeProject(rawMerged);

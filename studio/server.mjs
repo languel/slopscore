@@ -229,6 +229,7 @@ export async function startStudioServer(opts = {}) {
       shaders: { ...(raw.shaders || {}) },
       camera: { ...(raw.camera || {}) },
       chapters: { ...(raw.chapters || {}) },
+      chaptersList: Array.isArray(raw.chaptersList) ? raw.chaptersList : undefined,
       audio: { ...(raw.audio || {}) }
     };
   }
@@ -238,8 +239,10 @@ export async function startStudioServer(opts = {}) {
       shaders: { ...(overrides.shaders || {}) },
       camera: { ...(overrides.camera || {}) },
       chapters: { ...(overrides.chapters || {}) },
+      chaptersList: Array.isArray(overrides.chaptersList) ? overrides.chaptersList : undefined,
       audio: { ...(overrides.audio || {}) }
     };
+    if (!clean.chaptersList) delete clean.chaptersList;
     writeJson(getOverridesFile(paths), clean);
     return clean;
   }

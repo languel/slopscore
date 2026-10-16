@@ -110,13 +110,15 @@ function hash32(n) {
 }
 
 export class ProceduralScore {
-  constructor({ bpm = 164, duration = 180, sampleRate = 44100, rootNote = 53 } = {}) {
+  constructor({ bpm = 164, duration = 180, sampleRate = 44100, rootNote = 53, chapters = null } = {}) {
     this.bpm = bpm;
     this.duration = duration;
     this.sampleRate = sampleRate;
     this.rootNote = rootNote;
+    this.chapters = chapters;
     this.beatSec = 60 / bpm;
     this.stepSec = this.beatSec / 4; // 16th note
+    this.barSec = this.stepSec * 16;
     this.clock = new MeasureClock({ bpm, duration });
   }
 
@@ -131,6 +133,27 @@ export class ProceduralScore {
   }
 
   partAt(t) {
+    if (Array.isArray(this.chapters) && this.chapters.length) {
+      const bar = Math.floor(t / this.barSec) + 1;
+      const ch = this.chapters.find(c => bar >= (c.startBar || 1) && bar <= (c.endBar || 9999));
+      if (ch) {
+        if (ch.mood) {
+          const MOOD_MAP = {
+            intro: 0, sparse: 0, ambient: 0,
+            verse: 1, buildup: 1, arp: 1,
+            drop: 2, hook: 2, level1: 2,
+            dub: 3, groove: 3, halftime: 3,
+            breakdown: 4, minimal: 4,
+            spiral: 5, crescendo: 5,
+            climax: 6, peak: 6, max: 6,
+            outro: 7, coda: 7, release: 7
+          };
+          const m = String(ch.mood).toLowerCase();
+          if (MOOD_MAP[m] !== undefined) return MOOD_MAP[m];
+        }
+        return ch.index % 8;
+      }
+    }
     const ct = this.canonTime(t);
     if (ct < 20.0) return 0;       // 0..20s: Sparse Intro -> Rhythmic Buildup -> 20s "ON"
     if (ct < 34.0) return 1;       // 20..34s: Verse A -> Gentle Glitch Buildup (26..33s) -> Drop Vacuum

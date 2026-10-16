@@ -64,7 +64,7 @@ export async function synthesizeAudio(loaded, { stems = false, outPath = null, f
     return { scorePath: targetWav, featuresPath: paths.features, duration: res.duration };
   }
 
-  const scoreGen = new ProceduralScore({ bpm, duration, sampleRate });
+  const scoreGen = new ProceduralScore({ bpm, duration, sampleRate, chapters: project.chapters });
   audioBuffer = await scoreGen.synthesize({ returnStems: stems });
   const wavBytes = audioBufferToWav(audioBuffer);
   fs.writeFileSync(targetWav, Buffer.from(wavBytes));
