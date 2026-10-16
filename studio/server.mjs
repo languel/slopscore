@@ -158,14 +158,16 @@ function serveStaticFile(req, res, filePath) {
       'Content-Range': `bytes ${start}-${end}/${stat.size}`,
       'Accept-Ranges': 'bytes',
       'Content-Length': chunksize,
-      'Content-Type': contentType
+      'Content-Type': contentType,
+      'Cache-Control': 'no-store, no-cache, must-revalidate'
     });
     file.pipe(res);
   } else {
     res.writeHead(200, {
       'Content-Length': stat.size,
       'Content-Type': contentType,
-      'Accept-Ranges': 'bytes'
+      'Accept-Ranges': 'bytes',
+      'Cache-Control': 'no-store, no-cache, must-revalidate'
     });
     fs.createReadStream(filePath).pipe(res);
   }
@@ -872,11 +874,19 @@ export async function startStudioServer(opts = {}) {
 
     if (pathname === '/api/run' && req.method === 'POST') {
       try {
-        const { action, customCmd, range } = await readJsonBody();
+        const { action, customCmd, range, bpm } = await readJsonBody();
         if (currentRunTask && currentRunTask.status === 'running') {
           return sendJson(res, 409, {
             error: `Task already running: ${currentRunTask.title || currentRunTask.command}`
           });
+        }
+
+        if (bpm !== undefined && Number(bpm) > 0) {
+          const curLoaded = await getLoaded();
+          const ov = loadOverrides(curLoaded.paths);
+          ov.audio = ov.audio || {};
+          ov.audio.bpm = Number(bpm);
+          saveOverrides(curLoaded.paths, ov);
         }
 
         const presets = commandPresets(resolvedRoot);
@@ -1219,8 +1229,8 @@ export async function startStudioServer(opts = {}) {
           ];
           if (stem.id === 'master') {
             candidates.unshift(
-              [path.join(paths.out, 'score.mp3'), '/out/score.mp3'],
               [paths.outScore, '/out/score.wav'],
+              [path.join(paths.out, 'score.mp3'), '/out/score.mp3'],
               [paths.score, `/project/${project.audio.scorePath}`]
             );
           }

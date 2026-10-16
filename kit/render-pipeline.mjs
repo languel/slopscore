@@ -55,6 +55,12 @@ export async function synthesizeAudio(loaded, { stems = false, outPath = null, f
     if (path.resolve(paths.score) !== path.resolve(targetWav)) {
       fs.copyFileSync(paths.score, targetWav);
     }
+    writeJson(path.join(paths.out, 'audio-meta.json'), {
+      bpm: project.audio.bpm,
+      durationSeconds: duration,
+      sampleRate,
+      updatedAt: new Date().toISOString()
+    });
     return { scorePath: targetWav, featuresPath: paths.features, duration: res.duration };
   }
 
@@ -63,11 +69,19 @@ export async function synthesizeAudio(loaded, { stems = false, outPath = null, f
   const wavBytes = audioBufferToWav(audioBuffer);
   fs.writeFileSync(targetWav, Buffer.from(wavBytes));
 
-  // Also copy to project.audio.scorePath if inside score/
-  if (paths.score && !fs.existsSync(paths.score)) {
+  // Also copy to project.audio.scorePath so project score matches
+  if (paths.score) {
     fs.mkdirSync(path.dirname(paths.score), { recursive: true });
     fs.copyFileSync(targetWav, paths.score);
   }
+
+  // Write audio-meta.json so we can detect stale audio downstream
+  writeJson(path.join(paths.out, 'audio-meta.json'), {
+    bpm: project.audio.bpm,
+    durationSeconds: duration,
+    sampleRate,
+    updatedAt: new Date().toISOString()
+  });
 
   const feat = extractFeaturesFromBuffer(audioBuffer, project.fps);
   writeFeaturesBin(paths.features, feat.floats);
@@ -98,11 +112,23 @@ export async function synthesizeAudio(loaded, { stems = false, outPath = null, f
 /**
  * Ensure `features.bin`, `archive_bank.bin`, `bank.json`, and `context.bin` exist for the frame range.
  */
-export async function prepareRenderContext(loaded, { startFrame = 0, endFrame = null } = {}) {
+export async function prepareRenderContext(loaded, { startFrame = 0, endFrame = null, forceAudio = false } = {}) {
   const { project, paths } = loaded;
   fs.mkdirSync(paths.out, { recursive: true });
 
-  if (!fs.existsSync(paths.features)) {
+  const audioMetaPath = path.join(paths.out, 'audio-meta.json');
+  let audioMeta = null;
+  if (fs.existsSync(audioMetaPath)) {
+    try { audioMeta = JSON.parse(fs.readFileSync(audioMetaPath, 'utf8')); } catch {}
+  }
+  const audioStale = forceAudio ||
+    !fs.existsSync(paths.outScore) ||
+    !fs.existsSync(paths.features) ||
+    (audioMeta && (audioMeta.bpm !== project.audio.bpm || audioMeta.durationSeconds !== project.audio.durationSeconds));
+
+  if (audioStale) {
+    await synthesizeAudio(loaded, { stems: true, force: true });
+  } else if (!fs.existsSync(paths.features)) {
     if (fs.existsSync(paths.outScore)) {
       extractFeaturesFromFile(paths.outScore, paths.features, { fps: project.fps });
     } else if (fs.existsSync(paths.score)) {
@@ -201,8 +227,16 @@ export async function renderVideo(loaded, { outPath = null, range = null, render
   const endFrame = Math.max(startFrame + 1, Math.round(endSec * fps));
   const clipDuration = (endFrame - startFrame) / fps;
 
-  if (!fs.existsSync(paths.outScore)) {
-    await synthesizeAudio(loaded, { stems: false });
+  const audioMetaPath = path.join(paths.out, 'audio-meta.json');
+  let audioMeta = null;
+  if (fs.existsSync(audioMetaPath)) {
+    try { audioMeta = JSON.parse(fs.readFileSync(audioMetaPath, 'utf8')); } catch {}
+  }
+  const audioStale = !fs.existsSync(paths.outScore) ||
+    (audioMeta && (audioMeta.bpm !== project.audio.bpm || audioMeta.durationSeconds !== project.audio.durationSeconds));
+
+  if (audioStale) {
+    await synthesizeAudio(loaded, { stems: false, force: true });
   }
   await prepareRenderContext(loaded, { startFrame, endFrame });
 

@@ -307,9 +307,9 @@ export class ProceduralScore {
 
         if (part === 0) {
           if (t < 7.3) {
-            const isPulse = (bar % 2 === 0 && s16 === 0);
-            bassEnv = isPulse ? Math.exp(-stepPhase * 4.0) * 0.70 : 0.0;
-            cutoff = 0.035;
+            const isPulse = (s16 === 0 || s16 === 8);
+            bassEnv = isPulse ? Math.exp(-stepPhase * 3.8) * 0.70 : 0.0;
+            cutoff = 0.042;
           } else if (t < 14.6) {
             bassEnv = (s16 === 0 || s16 === 8) ? Math.exp(-stepPhase * 3.5) * 0.55 : 0.0;
             cutoff = 0.045;
@@ -322,7 +322,8 @@ export class ProceduralScore {
           bassEnv = Math.exp(-stepPhase * 4.5) * (0.45 + 0.45 * prog);
           cutoff = 0.04 + 0.25 * prog;
         } else if (part === 2 || part === 6) {
-          const wobble = 0.5 + 0.5 * Math.sin(2 * Math.PI * 3.2 * rawT);
+          const wobbleFreq = this.bpm / 30;
+          const wobble = 0.5 + 0.5 * Math.sin(2 * Math.PI * wobbleFreq * rawT);
           bassEnv = 0.85;
           cutoff = 0.06 + 0.18 * wobble;
         } else if (part === 3) {
@@ -482,11 +483,12 @@ export class ProceduralScore {
 
       if (part === 0) {
         if (t0 < 7.5) {
-          isMicroClick = (s16 === 4 || s16 === 12);
+          isKick = (s16 === 0 || s16 === 8);
+          isMicroClick = (s16 % 4 === 2);
         } else if (t0 < 14.5) {
-          isKick = (s16 === 0);
+          isKick = (s16 === 0 || s16 === 8);
           isGhost = (s16 === 4 || s16 === 14);
-          isMicroClick = (s16 === 8 || s16 === 12);
+          isMicroClick = (s16 % 4 === 2);
         } else if (t0 < 19.8) {
           isKick = (s16 === 0 || s16 === 6 || s16 === 10);
           isGhost = (s16 === 4 || s16 === 12);

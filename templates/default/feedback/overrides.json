@@ -1,5 +1,8 @@
 {
   "shaders": {},
   "camera": {},
-  "chapters": {}
+  "chapters": {},
+  "audio": {
+    "bpm": 165
+  }
 }
