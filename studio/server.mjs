@@ -226,7 +226,8 @@ export async function startStudioServer(opts = {}) {
     return {
       shaders: { ...(raw.shaders || {}) },
       camera: { ...(raw.camera || {}) },
-      chapters: { ...(raw.chapters || {}) }
+      chapters: { ...(raw.chapters || {}) },
+      audio: { ...(raw.audio || {}) }
     };
   }
 
@@ -234,7 +235,8 @@ export async function startStudioServer(opts = {}) {
     const clean = {
       shaders: { ...(overrides.shaders || {}) },
       camera: { ...(overrides.camera || {}) },
-      chapters: { ...(overrides.chapters || {}) }
+      chapters: { ...(overrides.chapters || {}) },
+      audio: { ...(overrides.audio || {}) }
     };
     writeJson(getOverridesFile(paths), clean);
     return clean;
@@ -352,14 +354,16 @@ export async function startStudioServer(opts = {}) {
           next = {
             shaders: { ...(incoming.shaders || {}) },
             camera: { ...(incoming.camera || {}) },
-            chapters: { ...(incoming.chapters || {}) }
+            chapters: { ...(incoming.chapters || {}) },
+            audio: { ...(incoming.audio || {}) }
           };
         } else {
           const cur = loadOverrides(paths);
           next = {
             shaders: { ...cur.shaders, ...(incoming.shaders || {}) },
             camera: { ...cur.camera, ...(incoming.camera || {}) },
-            chapters: { ...cur.chapters }
+            chapters: { ...cur.chapters },
+            audio: { ...cur.audio, ...(incoming.audio || {}) }
           };
           if (incoming.chapters && typeof incoming.chapters === 'object') {
             for (const [chId, chPatch] of Object.entries(incoming.chapters)) {
@@ -767,6 +771,22 @@ export async function startStudioServer(opts = {}) {
             logs.push(entry);
             if (logs.length > 2000) logs.shift();
             broadcastRunEvent({ type: 'log', line: entry });
+
+            // Extract frame progress e.g. "Rendered frame 120 / 1800" or "[Capture] 50/100"
+            const matchFrame = line.match(/(?:frame|Rendered frame)\s*(\d+)\s*\/\s*(\d+)/i) ||
+                               line.match(/\[(?:Slopscore|Capture)[^\]]*\]\s*(\d+)\s*\/\s*(\d+)/i);
+            if (matchFrame) {
+              const current = parseInt(matchFrame[1], 10);
+              const total = parseInt(matchFrame[2], 10);
+              const pct = total > 0 ? Math.min(100, Math.round((current / total) * 100)) : 0;
+              broadcastRunEvent({ type: 'progress', taskId, current, total, pct, text: `${pct}% (${current}/${total})` });
+            } else {
+              const matchPct = line.match(/(\d{1,3}(?:\.\d+)?)%/);
+              if (matchPct) {
+                const pct = Math.min(100, Math.round(parseFloat(matchPct[1])));
+                broadcastRunEvent({ type: 'progress', taskId, pct, text: `${pct}%` });
+              }
+            }
           }
         };
 

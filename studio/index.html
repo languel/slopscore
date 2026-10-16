@@ -328,6 +328,48 @@
       to { opacity: 1; transform: scale(1.15); }
     }
 
+    .header-progress-container {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: transparent;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 101;
+    }
+    .header-progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent-teal), var(--accent-coral));
+      transition: width 0.2s ease;
+      box-shadow: 0 0 8px var(--accent-teal);
+    }
+    .header-progress-bar.indeterminate {
+      width: 35%;
+      animation: progressIndeterminate 1.4s infinite ease-in-out;
+    }
+    @keyframes progressIndeterminate {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(350%); }
+    }
+    .run-progress-badge {
+      font-size: 9.5px;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      color: var(--accent-teal);
+      padding: 1px 4px;
+      border-radius: 4px;
+      background: color-mix(in srgb, var(--accent-teal) 12%, transparent);
+      display: none;
+      align-items: center;
+      gap: 3px;
+      line-height: 1;
+    }
+    .run-progress-badge.visible {
+      display: inline-flex;
+    }
+
     /* BUILD TERMINAL DRAWER */
     .terminal-drawer {
       position: fixed;
@@ -1062,6 +1104,7 @@
           <svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z" /></svg>
           <span id="term-status-dot" class="status-dot"></span>
         </button>
+        <span id="header-run-progress-badge" class="run-progress-badge">0%</span>
       </div>
 
       <button id="btn-quick-note" class="btn btn-icon-only btn-gold" title="Add Director Note">
@@ -1070,13 +1113,15 @@
       <button id="btn-sync-disk" class="btn btn-icon-only" title="Sync Annotations to Disk">
         <svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>
       </button>
-      <button id="btn-toggle-assistant" class="btn btn-sm btn-teal" title="Toggle Genereti Studio Assistant Drawer">
-        <svg class="icon icon-sm" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" /></svg>
-        <span>Assistant</span>
+      <button id="btn-toggle-assistant" class="btn btn-icon-only btn-teal" title="Toggle Genereti Studio Assistant Drawer">
+        <svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" /></svg>
       </button>
       <button id="theme-btn" class="btn btn-icon-only" title="Toggle Dark / Light Theme">
         <svg class="icon theme-icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" /></svg>
       </button>
+    </div>
+    <div class="header-progress-container">
+      <div id="header-progress-bar" class="header-progress-bar"></div>
     </div>
   </header>
 
@@ -1859,10 +1904,13 @@
 
         document.title = `Director Studio — ${state.project.title}`;
         document.getElementById('hdr-project-title').textContent = state.project.title;
-        document.getElementById('inp-tempo-bpm').value = state.project.audio?.bpm || 120;
+        const effectiveBpm = Number(state.overrides?.audio?.bpm || state.project.audio?.bpm || 120);
+        state.bpm = effectiveBpm;
+        state.project.audio.bpm = effectiveBpm;
+        document.getElementById('inp-tempo-bpm').value = effectiveBpm;
         document.getElementById('hdr-renderer-select').value = state.renderer;
         document.getElementById('audio-meta-subtitle').textContent =
-          `Procedural Score • ${state.project.audio?.bpm || 120} BPM • ${state.project.audio?.key || 'F minor'}`;
+          `Procedural Score • ${effectiveBpm} BPM • ${state.project.audio?.key || 'F minor'}`;
 
         syncOverrideSliders();
         rebuildClockAndTimeline();
@@ -2277,12 +2325,22 @@
         updateTransportReadout(state.currentTime);
       });
 
-      document.getElementById('inp-tempo-bpm').addEventListener('change', (e) => {
+      document.getElementById('inp-tempo-bpm').addEventListener('change', async (e) => {
         state.bpm = Math.max(40, Math.min(240, parseFloat(e.target.value) || 120));
         state.project.audio.bpm = state.bpm;
         rebuildClockAndTimeline();
         drawTimelineMusicalGrid();
         updateTransportReadout(state.currentTime);
+
+        // Persist tempo override to feedback/overrides.json
+        try {
+          await fetch('/api/overrides', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ audio: { bpm: state.bpm } })
+          });
+          showNotification(`Tempo set to ${state.bpm} BPM (persisted to feedback/overrides.json)`);
+        } catch { /* ignore */ }
       });
 
       document.getElementById('sel-musical-snap').addEventListener('change', (e) => {
@@ -3125,6 +3183,9 @@
 
       try {
         const sse = new EventSource('/api/run/stream');
+        const progressBar = document.getElementById('header-progress-bar');
+        const progressBadge = document.getElementById('header-run-progress-badge');
+
         sse.onmessage = (e) => {
           try {
             const data = JSON.parse(e.data);
@@ -3139,12 +3200,69 @@
               document.getElementById('term-badge').className = 'badge-status running';
               document.getElementById('term-badge').textContent = 'RUNNING';
               document.getElementById('term-status-dot').className = 'status-dot running';
+              if (progressBar) {
+                progressBar.style.width = '10%';
+                progressBar.classList.add('indeterminate');
+              }
+              if (progressBadge) {
+                progressBadge.classList.add('visible');
+                progressBadge.textContent = 'RUNNING';
+              }
+            } else if (data.type === 'progress') {
+              if (progressBar) {
+                progressBar.classList.remove('indeterminate');
+                progressBar.style.width = `${Math.max(5, Math.min(100, data.pct || 0))}%`;
+              }
+              if (progressBadge) {
+                progressBadge.classList.add('visible');
+                progressBadge.textContent = data.text || `${data.pct}%`;
+              }
             } else if (data.type === 'finish') {
               document.getElementById('term-badge').className = `badge-status ${data.task?.exitCode === 0 ? 'completed' : 'failed'}`;
               document.getElementById('term-badge').textContent = (data.task?.status || 'DONE').toUpperCase();
               document.getElementById('term-status-dot').className = 'status-dot';
-              if (data.task?.artifact === 'sheet') {
-                document.getElementById('sheet-img').src = `/out/sheet.jpg?t=${Date.now()}`;
+              if (progressBar) {
+                progressBar.classList.remove('indeterminate');
+                progressBar.style.width = '100%';
+                setTimeout(() => { progressBar.style.width = '0%'; }, 1200);
+              }
+              if (progressBadge) {
+                progressBadge.textContent = data.task?.exitCode === 0 ? '✓ 100%' : 'FAILED';
+                setTimeout(() => { progressBadge.classList.remove('visible'); }, 3000);
+              }
+
+              // Refresh artifact media cache
+              const cacheBust = Date.now();
+              if (data.task?.artifact === 'sheet' || data.task?.action === 'sheet') {
+                const sheetImg = document.getElementById('sheet-img');
+                if (sheetImg) sheetImg.src = `/out/sheet.jpg?t=${cacheBust}`;
+                showNotification('Contact sheet updated');
+              } else if (data.task?.artifact === 'audio' || data.task?.action === 'audio') {
+                const audio = document.getElementById('master-audio-preview');
+                if (audio) { audio.src = `/out/score.wav?t=${cacheBust}`; audio.load(); }
+                fetch('/api/features').then(r => r.arrayBuffer()).then(buf => {
+                  const floats = new Float32Array(buf);
+                  state.audioFeatures = [];
+                  for (let i = 0; i < floats.length; i += 6) {
+                    state.audioFeatures.push(Array.from(floats.subarray(i, i + 6)));
+                  }
+                  drawTimelineWaveform();
+                  drawAudioFeatures();
+                }).catch(() => {});
+                showNotification(`Audio & features re-synthesized @ ${state.bpm} BPM`);
+              } else if (data.task?.artifact === 'video' || data.task?.action === 'video' || data.task?.artifact === 'preview' || data.task?.action === 'preview') {
+                const vid = document.getElementById('master-video');
+                if (vid) {
+                  const curTime = vid.currentTime;
+                  const wasPaused = vid.paused;
+                  vid.src = `/out/video.mp4?t=${cacheBust}`;
+                  vid.load();
+                  vid.onloadedmetadata = () => {
+                    vid.currentTime = Math.min(curTime, vid.duration || 60);
+                    if (!wasPaused) vid.play().catch(() => {});
+                  };
+                }
+                showNotification('Video render updated');
               }
             }
           } catch { /* ignore */ }

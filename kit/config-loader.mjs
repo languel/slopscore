@@ -68,11 +68,22 @@ export async function loadProject(dir = process.cwd(), { strict = false } = {}) 
     raw = mod.default || mod.config || mod;
   }
   const project = normalizeProject(raw);
+  const paths = projectPaths(root, project);
+  // Apply feedback overrides (e.g. tempo/bpm, shaders, camera) if present on disk
+  const overrides = readJson(path.join(paths.feedback, 'overrides.json'), null);
+  if (overrides) {
+    if (overrides.audio?.bpm) {
+      project.audio.bpm = Number(overrides.audio.bpm);
+    }
+    if (overrides.renderer) {
+      project.renderer = overrides.renderer;
+    }
+  }
   const validation = validateProject(project);
   if (strict && !validation.ok) {
     throw new Error(`Invalid ${path.basename(configFile)}:\n` + validation.errors.map(e => `  - ${e.path}: ${e.message}`).join('\n'));
   }
-  return { root, configFile, raw, project, paths: projectPaths(root, project), validation };
+  return { root, configFile, raw, project, paths, validation };
 }
 
 export function readJson(file, fallback) {

@@ -148,12 +148,13 @@ export function resolveClipFrame(bankClip, localSec, { mode = 'loop', speed = 1 
  * @param {object} [opts.overrides] live overrides { shaders:{}, camera:{}, chapters:{[id]:{...}} }
  */
 export function createTimeline(project, opts = {}) {
-  const clock = new MeasureClock({ bpm: project.audio.bpm, timeSignature: project.audio.timeSignature, duration: project.audio.durationSeconds });
+  const overrides = opts.overrides || { shaders: {}, camera: {}, chapters: {} };
+  const effectiveBpm = Number(overrides.audio?.bpm || overrides.bpm || project.audio.bpm);
+  const clock = new MeasureClock({ bpm: effectiveBpm, timeSignature: project.audio.timeSignature, duration: project.audio.durationSeconds });
   const fps = project.fps;
   const features = featureSampler(opts.features, fps);
   const clipsById = new Map((opts.clips || []).map(c => [c.id, c]));
   const bankClips = new Map(((opts.bank && opts.bank.clips) || []).map(c => [c.key, c]));
-  const overrides = opts.overrides || { shaders: {}, camera: {}, chapters: {} };
   const chapters = project.chapters;
 
   function chapterIndexAt(t) {

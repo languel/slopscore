@@ -41,7 +41,7 @@ export function buildNative(loaded) {
 /**
  * Synthesize or load the project score, export stems if requested, and write `out/features.bin`.
  */
-export async function synthesizeAudio(loaded, { stems = false, outPath = null } = {}) {
+export async function synthesizeAudio(loaded, { stems = false, outPath = null, force = false } = {}) {
   const { project, paths } = loaded;
   fs.mkdirSync(paths.out, { recursive: true });
   const targetWav = outPath ? path.resolve(loaded.root, outPath) : paths.outScore;
@@ -50,7 +50,7 @@ export async function synthesizeAudio(loaded, { stems = false, outPath = null } 
   const { bpm, durationSeconds: duration, sampleRate = 44100 } = project.audio;
   let audioBuffer;
 
-  if (project.audio.synth === null && fs.existsSync(paths.score)) {
+  if (!force && project.audio.synth === null && fs.existsSync(paths.score)) {
     const res = extractFeaturesFromFile(paths.score, paths.features, { fps: project.fps, sampleRate });
     if (path.resolve(paths.score) !== path.resolve(targetWav)) {
       fs.copyFileSync(paths.score, targetWav);
@@ -244,6 +244,7 @@ export async function renderVideo(loaded, { outPath = null, range = null, render
   }
 
   const { renderBrowserVideo } = await import('../renderers/shared/capture.mjs');
+  let lastReport = 0;
   await renderBrowserVideo({
     loaded,
     rendererId: engine,
@@ -252,7 +253,14 @@ export async function renderVideo(loaded, { outPath = null, range = null, render
     audioPath: paths.outScore,
     startSec,
     clipDuration,
-    outPath: targetOut
+    outPath: targetOut,
+    onProgress: ({ index, total, frame }) => {
+      const now = Date.now();
+      if (now - lastReport > 300 || index === total) {
+        lastReport = now;
+        console.error(`[Slopscore ${engine}] Rendered frame ${index} / ${total}`);
+      }
+    }
   });
   return { outPath: targetOut, frames: endFrame - startFrame, duration: clipDuration, renderer: engine };
 }
